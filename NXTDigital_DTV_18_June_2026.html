@@ -1,0 +1,2449 @@
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NXT Digital — DTV Performance Dashboard · 29 May 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&amp;family=DM+Sans:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090f;--bg2:#0d1422;--bg3:#131d30;--card:#0f1929;
+  --border:rgba(255,255,255,0.055);--border2:rgba(255,255,255,0.11);
+  --text:#edf2ff;--t2:#7a8baa;--t3:#3a4f72;
+  --blue:#4f8ef7;--blue2:#1d4ed8;--blueg:rgba(79,142,247,.12);
+  --teal:#10d9c4;--tealg:rgba(16,217,196,.12);
+  --amber:#fbbf24;--amberg:rgba(251,191,36,.12);
+  --coral:#fb923c;--coralg:rgba(251,146,60,.12);
+  --green:#34d399;--greeng:rgba(52,211,153,.12);
+  --red:#f87171;--redg:rgba(248,113,113,.12);
+  --purple:#a78bfa;--purpleg:rgba(167,139,250,.12);
+  --sb:240px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* SIDEBAR */
+.sb{position:fixed;top:0;left:0;width:var(--sb);height:100vh;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;}
+.sb-top{padding:18px 16px 14px;border-bottom:1px solid var(--border);}
+.logo-wrap{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.logo-img{width:110px;height:auto;object-fit:contain;}
+.logo-divider{width:1px;height:36px;background:var(--border2);}
+.logo-right{display:flex;flex-direction:column;justify-content:center;}
+.logo-title{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:var(--text);letter-spacing:.03em;line-height:1.3;}
+.logo-sub{font-size:9px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-top:2px;}
+.report-chip{display:inline-flex;align-items:center;gap:5px;background:var(--greeng);border:1px solid rgba(52,211,153,.25);border-radius:8px;padding:4px 10px;font-size:10px;font-weight:600;color:var(--green);}
+.pulse{width:5px;height:5px;border-radius:50%;background:var(--green);animation:p 2s infinite;}
+@keyframes p{0%,100%{opacity:1;}50%{opacity:.3;}}
+.nav{flex:1;overflow-y:auto;padding:12px 10px;}
+.nav::-webkit-scrollbar{width:3px;}
+.nav::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.ng{font-size:9px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;padding:0 9px;margin:14px 0 5px;}
+.ng:first-child{margin-top:0;}
+.nb{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:9px;font-size:12.5px;color:var(--t2);cursor:pointer;border:none;background:none;width:100%;text-align:left;transition:all .15s;margin-bottom:1px;}
+.nb:hover{background:rgba(255,255,255,.04);color:var(--text);}
+.nb.on{background:var(--blueg);color:var(--blue);border:1px solid rgba(79,142,247,.2);}
+.nb svg{width:14px;height:14px;flex-shrink:0;opacity:.6;}
+.nb.on svg{opacity:1;}
+.nb-badge{margin-left:auto;font-size:9px;padding:1px 6px;border-radius:6px;font-weight:700;}
+.nb.on .nb-badge{background:var(--blueg);color:var(--blue);}
+.nb:not(.on) .nb-badge{background:rgba(255,255,255,.06);color:var(--t3);}
+.sb-foot{padding:12px 16px;border-top:1px solid var(--border);}
+.sb-date{font-size:10px;color:var(--t3);line-height:1.7;}
+.sb-date strong{color:var(--t2);font-weight:500;}
+
+/* MAIN */
+.main{margin-left:var(--sb);min-height:100vh;}
+.topbar{height:55px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:50;}
+.ptitle{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;color:var(--text);}
+.ptitle em{color:var(--t2);font-style:normal;font-weight:400;}
+.topbar-chips{display:flex;gap:7px;}
+.chip{display:flex;align-items:center;gap:5px;border:1px solid var(--border2);border-radius:14px;padding:4px 11px;font-size:11px;color:var(--t2);background:var(--card);cursor:pointer;transition:.15s;}
+.chip:hover{border-color:var(--blue);color:var(--text);}
+.chip.act-chip{border-color:rgba(79,142,247,.4);color:var(--blue);background:var(--blueg);}
+.chip-d{width:5px;height:5px;border-radius:50%;}
+
+/* CONTENT */
+.content{padding:20px 24px 32px;}
+.pg{display:none;animation:fi .2s ease;}
+.pg.on{display:block;}
+@keyframes fi{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+/* KPI CARDS */
+.krow{display:grid;gap:12px;margin-bottom:14px;}
+.k4{grid-template-columns:repeat(4,1fr);}
+.k5{grid-template-columns:repeat(5,1fr);}
+.k3{grid-template-columns:repeat(3,1fr);}
+.kc{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:16px 18px;position:relative;overflow:hidden;transition:transform .2s,border-color .2s;}
+.kc:hover{transform:translateY(-2px);border-color:var(--border2);}
+.kc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:13px 13px 0 0;}
+.kc.b::before{background:linear-gradient(90deg,var(--blue),var(--purple));}
+.kc.t::before{background:linear-gradient(90deg,var(--teal),var(--green));}
+.kc.a::before{background:linear-gradient(90deg,var(--amber),var(--coral));}
+.kc.c::before{background:linear-gradient(90deg,var(--coral),var(--red));}
+.kc.g::before{background:linear-gradient(90deg,var(--green),var(--teal));}
+.kc.r::before{background:linear-gradient(90deg,var(--red),var(--coral));}
+.kc.p::before{background:linear-gradient(90deg,var(--purple),var(--blue));}
+.kg-blob{position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;opacity:.4;}
+.kc.b .kg-blob{background:var(--blueg);} .kc.t .kg-blob{background:var(--tealg);}
+.kc.a .kg-blob{background:var(--amberg);} .kc.c .kg-blob{background:var(--coralg);}
+.kc.g .kg-blob{background:var(--greeng);} .kc.r .kg-blob{background:var(--redg);}
+.kc.p .kg-blob{background:var(--purpleg);}
+.kl{font-size:9.5px;color:var(--t2);letter-spacing:.07em;text-transform:uppercase;margin-bottom:9px;}
+.kv{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1;margin-bottom:4px;}
+.kc.b .kv{color:var(--blue);} .kc.t .kv{color:var(--teal);}
+.kc.a .kv{color:var(--amber);} .kc.c .kv{color:var(--coral);}
+.kc.g .kv{color:var(--green);} .kc.r .kv{color:var(--red);}
+.kc.p .kv{color:var(--purple);}
+.km{font-size:10px;color:var(--t3);margin-bottom:7px;}
+.ktag{display:inline-block;font-size:9px;padding:2px 7px;border-radius:7px;font-weight:600;letter-spacing:.02em;}
+.kc.b .ktag{background:var(--blueg);color:var(--blue);}
+.kc.t .ktag{background:var(--tealg);color:var(--teal);}
+.kc.a .ktag{background:var(--amberg);color:var(--amber);}
+.kc.c .ktag{background:var(--coralg);color:var(--coral);}
+.kc.g .ktag{background:var(--greeng);color:var(--green);}
+.kc.r .ktag{background:var(--redg);color:var(--red);}
+.kc.p .ktag{background:var(--purpleg);color:var(--purple);}
+
+/* GRIDS */
+.g75{display:grid;grid-template-columns:7fr 5fr;gap:12px;margin-bottom:12px;}
+.g66{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.gf{margin-bottom:12px;}
+
+/* CHART CARDS */
+.cc{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:17px 19px;}
+.cc-h{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.cc-t{font-family:'Syne',sans-serif;font-size:12.5px;font-weight:600;color:var(--text);}
+.cc-s{font-size:10px;color:var(--t3);margin-top:2px;}
+.cw{position:relative;width:100%;}
+.h190{height:190px;}.h200{height:200px;}.h220{height:220px;}.h250{height:250px;}.h260{height:260px;}.h280{height:280px;}
+.leg{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:9px;}
+.li{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--t2);}
+.ls{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+
+/* TABLES */
+.dt{width:100%;border-collapse:collapse;font-size:12px;}
+.dt th{text-align:left;font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);padding:6px 10px;border-bottom:1px solid var(--border);}
+.dt td{padding:8.5px 10px;border-bottom:1px solid var(--border);color:var(--t2);}
+.dt tr:last-child td{border-bottom:none;}
+.dt tr:hover td{background:rgba(255,255,255,.02);color:var(--text);}
+.tn{color:var(--text)!important;font-weight:600;}
+.bbar{background:rgba(255,255,255,.05);border-radius:3px;height:4px;width:88px;margin-top:3px;}
+.bfill{height:4px;border-radius:3px;}
+.tag{display:inline-block;padding:1.5px 7px;border-radius:6px;font-size:9px;font-weight:700;}
+.tag-b{background:var(--blueg);color:var(--blue);}
+.tag-t{background:var(--tealg);color:var(--teal);}
+.tag-g{background:var(--greeng);color:var(--green);}
+.tag-r{background:var(--redg);color:var(--red);}
+.tag-a{background:var(--amberg);color:var(--amber);}
+.dv{display:flex;align-items:center;gap:10px;margin:20px 0 12px;}
+.dv-l{font-family:'Syne',sans-serif;font-size:9.5px;font-weight:700;color:var(--t3);letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;}
+.dv-line{flex:1;height:1px;background:var(--border);}
+.dv-b{font-size:9px;padding:2px 9px;border-radius:7px;font-weight:700;}
+.db-b{background:var(--blueg);color:var(--blue);}
+.db-t{background:var(--tealg);color:var(--teal);}
+.pos{color:var(--green)!important;font-weight:700;}
+.neg{color:var(--red)!important;font-weight:700;}
+.hl-row td{background:rgba(52,211,153,.04)!important;}
+
+/* ══ DATA EDITOR MODAL ══ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;backdrop-filter:blur(4px);align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:#0d1422;border:1px solid var(--border2);border-radius:16px;width:94vw;max-width:1100px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;}
+.modal-hd{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.modal-hd-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+.modal-hd-right{display:flex;gap:8px;align-items:center;}
+.modal-close{background:rgba(255,255,255,.07);border:1px solid var(--border2);border-radius:8px;color:var(--t2);cursor:pointer;padding:6px 12px;font-size:12px;transition:.15s;}
+.modal-close:hover{background:rgba(255,255,255,.12);color:var(--text);}
+.modal-tabs{display:flex;gap:4px;padding:14px 22px 0;border-bottom:1px solid var(--border);flex-shrink:0;}
+.mtab{padding:8px 16px;border-radius:8px 8px 0 0;font-size:12.5px;color:var(--t2);cursor:pointer;border:none;background:none;transition:.15s;border:1px solid transparent;border-bottom:none;}
+.mtab:hover{color:var(--text);background:rgba(255,255,255,.04);}
+.mtab.on{color:var(--blue);background:var(--blueg);border-color:rgba(79,142,247,.25);}
+.modal-body{flex:1;overflow-y:auto;padding:20px 22px;}
+.modal-body::-webkit-scrollbar{width:4px;}
+.modal-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+.editor-section{display:none;}
+.editor-section.on{display:block;}
+.editor-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.editor-table th{text-align:left;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);padding:7px 10px;border-bottom:1px solid var(--border);}
+.editor-table td{padding:5px 6px;border-bottom:1px solid var(--border);}
+.editor-table tr:last-child td{border-bottom:none;}
+.editor-table td:first-child{color:var(--text);font-weight:600;font-size:12.5px;padding-left:10px;}
+.ei{background:var(--bg3);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-size:12.5px;padding:5px 9px;width:100%;font-family:'DM Sans',sans-serif;transition:.15s;}
+.ei:focus{outline:none;border-color:var(--blue);background:#1a2640;}
+.ei:hover{border-color:var(--t3);}
+.editor-hint{font-size:11px;color:var(--t3);margin-bottom:14px;padding:10px 14px;background:var(--bg3);border-radius:8px;border-left:3px solid var(--blue);}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.btn{border:none;border-radius:9px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;padding:9px 20px;transition:.15s;}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-primary:hover{background:#3a7be8;}
+.btn-secondary{background:rgba(255,255,255,.07);border:1px solid var(--border2);color:var(--t2);}
+.btn-secondary:hover{background:rgba(255,255,255,.12);color:var(--text);}
+.btn-green{background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);color:var(--green);}
+.btn-green:hover{background:rgba(52,211,153,.25);}
+.btn-amber{background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.3);color:var(--amber);}
+.btn-amber:hover{background:rgba(251,191,36,.25);}
+.save-toast{display:none;position:fixed;bottom:24px;right:24px;background:#0d1422;border:1px solid rgba(52,211,153,.4);border-radius:10px;padding:12px 18px;font-size:13px;color:var(--green);z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.5);}
+.save-toast.show{display:flex;align-items:center;gap:8px;animation:slideUp .3s ease;}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+/* EXPORT PANEL */
+.export-panel{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:18px 20px;}
+.export-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;margin-bottom:14px;}
+.export-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.export-btn{background:var(--card);border:1px solid var(--border2);border-radius:9px;padding:14px 16px;cursor:pointer;transition:.15s;text-align:left;}
+.export-btn:hover{border-color:var(--blue);background:#131d30;}
+.export-btn-title{font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.export-btn-sub{font-size:10.5px;color:var(--t3);}
+.export-icon{font-size:18px;margin-bottom:8px;}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* ── ADMIN LOGIN OVERLAY ── */
+.lock-overlay{display:flex;position:fixed;inset:0;background:rgba(7,9,15,.92);z-index:2000;backdrop-filter:blur(8px);align-items:center;justify-content:center;}
+.lock-box{background:#0d1422;border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:40px 44px;width:380px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.6);}
+.lock-logo{margin-bottom:20px;}
+.lock-logo img{height:40px;width:auto;object-fit:contain;}
+.lock-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.lock-sub{font-size:12px;color:var(--t3);margin-bottom:28px;line-height:1.5;}
+.lock-input-wrap{position:relative;margin-bottom:14px;}
+.lock-input{width:100%;background:#131d30;border:1.5px solid rgba(255,255,255,.1);border-radius:10px;color:var(--text);font-size:14px;padding:12px 44px 12px 16px;font-family:'DM Sans',sans-serif;transition:.2s;letter-spacing:.05em;}
+.lock-input:focus{outline:none;border-color:var(--blue);}
+.lock-input.err{border-color:var(--red);animation:shake .3s ease;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+.lock-eye{position:absolute;right:14px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--t3);font-size:16px;user-select:none;}
+.lock-eye:hover{color:var(--t2);}
+.lock-btn{width:100%;background:linear-gradient(135deg,var(--blue),#7c3aed);border:none;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;padding:13px;cursor:pointer;transition:.2s;letter-spacing:.03em;}
+.lock-btn:hover{opacity:.88;transform:translateY(-1px);}
+.lock-err{font-size:11.5px;color:var(--red);min-height:16px;margin-bottom:12px;}
+.lock-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);border-radius:8px;padding:4px 12px;font-size:10.5px;color:var(--green);font-weight:600;margin-bottom:20px;}
+.lock-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+
+/* ── ADMIN SESSION INDICATOR ── */
+.admin-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.25);border-radius:10px;padding:4px 12px;font-size:11px;font-weight:600;color:var(--amber);cursor:pointer;}
+.admin-badge:hover{background:rgba(251,191,36,.2);}
+.viewer-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);border-radius:10px;padding:4px 12px;font-size:11px;font-weight:600;color:var(--blue);}
+
+/* ── LOCKED BUTTON STATE ── */
+.btn-locked{opacity:.35;cursor:not-allowed !important;filter:grayscale(.5);}
+.lock-icon{font-size:13px;}
+
+/* ── UPLOAD MODAL ── */
+.upload-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1500;backdrop-filter:blur(6px);align-items:center;justify-content:center;}
+.upload-overlay.open{display:flex;}
+.upload-box{background:#0d1422;border:1px solid var(--border2);border-radius:16px;width:500px;overflow:hidden;}
+.upload-hd{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.upload-hd-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;}
+.upload-body{padding:24px;}
+.drop-zone{border:2px dashed var(--border2);border-radius:12px;padding:40px 24px;text-align:center;cursor:pointer;transition:.2s;position:relative;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--blue);background:var(--blueg);}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.drop-icon{font-size:36px;margin-bottom:12px;}
+.drop-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.drop-sub{font-size:11.5px;color:var(--t3);line-height:1.5;}
+.drop-hint{font-size:10.5px;color:var(--t3);margin-top:20px;padding:10px 14px;background:var(--bg);border-radius:8px;border-left:3px solid var(--amber);text-align:left;}
+.drop-hint strong{color:var(--amber);}
+.upload-preview{display:none;margin-top:16px;background:var(--bg);border-radius:10px;padding:14px 16px;border:1px solid var(--border);}
+.upload-preview.show{display:block;}
+.up-file-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.up-file-icon{font-size:22px;}
+.up-file-name{font-size:13px;font-weight:600;color:var(--text);}
+.up-file-size{font-size:11px;color:var(--t3);}
+.up-parsed-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11.5px;}
+.up-parsed-row{display:flex;justify-content:space-between;background:var(--card);border-radius:7px;padding:6px 10px;}
+.up-parsed-label{color:var(--t2);}
+.up-parsed-val{color:var(--teal);font-weight:700;font-family:'Syne',sans-serif;}
+.upload-footer{padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;margin-top:14px;display:none;}
+.progress-bar.show{display:block;}
+.progress-fill{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--blue),var(--teal));width:0%;transition:width .4s;}
+</style>
+</head>
+<body>
+<!-- ══ ADMIN LOGIN OVERLAY ══ -->
+<div class="lock-overlay" id="lockOverlay" style="display: none;">
+  <div class="lock-box">
+    <div class="lock-logo"><img src="data:image/jpeg;base64,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" alt="NXT Digital"></div>
+    <div class="lock-badge"><div class="lock-badge-dot"></div>NXT Digital · DTV Dashboard</div>
+    <div class="lock-title">🔐 Admin Access Required</div>
+    <div class="lock-sub">Enter the admin password to unlock<br>the data editing tools.</div>
+    <div class="lock-input-wrap">
+      <input class="lock-input" type="password" id="adminPwInput" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')tryLogin()">
+      <span class="lock-eye" id="eyeBtn" onclick="toggleEye()">👁</span>
+    </div>
+    <div class="lock-err" id="loginErr"></div>
+    <button class="lock-btn" onclick="tryLogin()">🔓 Unlock Admin Access</button>
+
+  </div>
+</div>
+
+<!-- ══ LOGOUT CONFIRM ══ -->
+<div class="lock-overlay" id="logoutOverlay" style="display:none;">
+  <div class="lock-box" style="padding:32px 40px;">
+    <div style="font-size:32px;margin-bottom:12px;">🔒</div>
+    <div class="lock-title">Lock Dashboard?</div>
+    <div style="font-size:12px;color:var(--t3);margin:10px 0 24px;">This will end the admin session and return to viewer mode.</div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button onclick="cancelLogout()" style="background:rgba(255,255,255,.07);border:1px solid var(--border2);border-radius:9px;color:var(--t2);font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;padding:10px 24px;cursor:pointer;">Cancel</button>
+      <button onclick="confirmLogout()" style="background:var(--red);border:none;border-radius:9px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding:10px 24px;cursor:pointer;">Yes, Lock</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- SIDEBAR -->
+<aside class="sb">
+  <div class="sb-top">
+    <div class="logo-wrap">
+      <img src="data:image/jpeg;base64,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" class="logo-img" alt="NXT Digital Logo">
+      <div class="logo-divider"></div>
+      <div class="logo-right">
+        <div class="logo-title">DTV Performance<br>Dashboard</div>
+        <div class="logo-sub">Power BI Report</div>
+      </div>
+    </div>
+    <div class="report-chip"><div class="pulse"></div>Data as on: <span id="reportDate">18 June 2026</span></div>
+  </div>
+  <nav class="nav">
+    <div class="ng">Views</div>
+    <button class="nb on" onclick="go('ov',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+      Overview<span class="nb-badge" id="nb-ov">4 KPIs</span>
+    </button>
+    <button class="nb" onclick="go('sm',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+      Summary<span class="nb-badge">8 Rgns</span>
+    </button>
+    <button class="nb" onclick="go('na',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+      New Activations<span class="nb-badge" id="nb-na">21.8K</span>
+    </button>
+    <button class="nb" onclick="go('ab',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"></circle><path d="M3 21v-2a7 7 0 0 1 14 0v2"></path></svg>
+      Active Base<span class="nb-badge" id="nb-ab">17.57L</span>
+    </button>
+    <button class="nb" onclick="go('nr',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+      Net Adds<span class="nb-badge" id="nb-nr">54.8K</span>
+    </button>
+    <button class="nb" onclick="go('aop',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4l3 3"></path></svg>
+      AOP - Target vs Ach<span class="nb-badge" style="background:var(--amberg);color:var(--amber);">NEW</span>
+    </button>
+    <div class="ng">Platforms</div>
+    <button class="nb" onclick="go('cv',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 3l-4 4-4-4"></path></svg>
+      CATV Detail<span class="nb-badge">4 Rgns</span>
+    </button>
+    <button class="nb" onclick="go('ht',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+      HITS Detail<span class="nb-badge">8 Rgns</span>
+    </button>
+    <div class="ng">Tools</div>
+    <button class="nb" id="sideEditBtn" onclick="checkAdminThenEdit()" style="color:var(--amber);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+      Edit Data<span class="nb-badge" id="editBadge" style="background:rgba(248,113,113,.15);color:var(--red);">🔒 Admin</span>
+    </button>
+
+    <button class="nb" onclick="checkAdminThenUpload()" style="color:var(--purple);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+      Upload Data<span class="nb-badge" id="uploadBadge" style="background:rgba(248,113,113,.15);color:var(--red);">🔒 Admin</span>
+    </button>
+    <button class="nb" onclick="openExport()" style="color:var(--teal);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      Export Data<span class="nb-badge" style="background:var(--tealg);color:var(--teal);">CSV</span>
+    </button>
+    <button class="nb" onclick="saveAsHTML()" style="color:var(--green);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+      Save Dashboard<span class="nb-badge" style="background:var(--greeng);color:var(--green);">HTML</span>
+    </button>
+  </nav>
+  <div class="sb-foot">
+    <div class="sb-date">Report Date<br><strong id="footerDate">18 June 2026</strong><br>Source: DTV_Data.xlsx</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div class="ptitle" id="ptitle">Overview <em>/ NXT Digital · DTV Performance</em></div>
+    <div class="topbar-chips">
+      <div class="chip"><div class="chip-d" style="background:var(--green)"></div>Data as on: <span id="chipDate">18 June 2026</span></div>
+      <div class="chip"><div class="chip-d" style="background:var(--blue)"></div>CATV + HITS</div>
+      <div class="chip act-chip" id="editChip" onclick="openEditor()">✏️ Edit Data</div>
+      <div class="chip" onclick="saveAsHTML()" style="border-color:rgba(52,211,153,.4);color:var(--green);">💾 Save Dashboard</div>
+      <div class="chip" onclick="openExport()">⬇ Export CSV</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- OVERVIEW -->
+    <div class="pg on" id="pg-ov">
+      <div class="krow k4">
+        <div class="kc b"><div class="kg-blob"></div><div class="kl">CATV New Activations</div><div class="kv" id="kv-catv-new">2,703</div><div class="km" id="km-catv-new">4 active regions</div><span class="ktag" id="kt-catv-new">HD: 2,681 · SD: 22</span></div>
+        <div class="kc t"><div class="kg-blob"></div><div class="kl">HITS New Activations</div><div class="kv" id="kv-hits-new">19,145</div><div class="km" id="km-hits-new">8 active regions</div><span class="ktag" id="kt-hits-new">HD: 8,814 · SD: 10,331</span></div>
+        <div class="kc a"><div class="kg-blob"></div><div class="kl">CATV Active Base</div><div class="kv" id="kv-catv-base">4.78L</div><div class="km" id="km-catv-base">4,78,391 subscribers</div><span class="ktag" id="kt-catv-base">▼9,383 vs last month</span></div>
+        <div class="kc c"><div class="kg-blob"></div><div class="kl">HITS Active Base</div><div class="kv" id="kv-hits-base">12.78L</div><div class="km" id="km-hits-base">12,78,208 subscribers</div><span class="ktag" id="kt-hits-base">▼45,413 vs last month</span></div>
+      </div>
+      <div class="g75">
+        <div class="cc">
+          <div class="cc-h"><div><div class="cc-t">New Activations by Region — CATV &amp; HITS</div><div class="cc-s">Side-by-side across all active regions</div></div></div>
+          <div class="leg"><div class="li"><div class="ls" style="background:var(--blue)"></div>CATV</div><div class="li"><div class="ls" style="background:var(--teal)"></div>HITS</div></div>
+          <div class="cw h280"><canvas id="c_ov_bar" width="824" height="382" style="display: block; box-sizing: border-box; height: 280px; width: 604px;"></canvas></div>
+        </div>
+        <div class="cc">
+          <div class="cc-h"><div><div class="cc-t">Combined Active Base</div><div class="cc-s" id="ov-base-sub">Total: 17.57L · HITS 73%</div></div></div>
+          <div class="cw h200"><canvas id="c_ov_dnt" width="573" height="273" style="display: block; box-sizing: border-box; height: 200px; width: 420px;"></canvas></div>
+          <div class="leg" style="justify-content:center;margin-top:10px;">
+            <div class="li"><div class="ls" style="background:var(--blue)"></div><span id="ov-catv-pct">CATV 27%</span></div>
+            <div class="li"><div class="ls" style="background:var(--teal)"></div><span id="ov-hits-pct">HITS 73%</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="g66">
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">CATV — Region Share of Base</div><div class="cc-s" id="ov-catv-base-sub">4,78,391 total active</div></div></div><div class="cw h190"><canvas id="c_ov_cpie" width="699" height="259" style="display: block; box-sizing: border-box; height: 190px; width: 512px;"></canvas></div></div>
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">HITS — Region Share of Base</div><div class="cc-s" id="ov-hits-base-sub">12,78,208 total active</div></div></div><div class="cw h190"><canvas id="c_ov_hpie" width="699" height="259" style="display: block; box-sizing: border-box; height: 190px; width: 512px;"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="pg" id="pg-sm">
+      <div class="krow k4">
+        <div class="kc b"><div class="kg-blob"></div><div class="kl">Combined Base</div><div class="kv" id="kv-comb">17.57L</div><div class="km" id="km-comb">17,56,599 total</div></div>
+        <div class="kc t"><div class="kg-blob"></div><div class="kl">Total New Acts</div><div class="kv" id="kv-total-new">21,848</div><div class="km">CATV + HITS</div></div>
+        <div class="kc r"><div class="kg-blob"></div><div class="kl">Total Net Adds</div><div class="kv" id="kv-total-net">-54,796</div><div class="km">vs last month</div></div>
+        <div class="kc a"><div class="kg-blob"></div><div class="kl">Biggest Decline</div><div class="kv" id="kv-bot-region">ROW</div><div class="km" id="km-bot-region">Net: -14,257</div></div>
+      </div>
+      <div class="gf"><div class="cc">
+        <div class="cc-h"><div><div class="cc-t">Regional Summary — Active Base · New Activations · Net Adds</div><div class="cc-s">Note: JV &amp; South II excluded from CATV</div></div></div>
+        <table class="dt"><thead><tr><th>Region</th><th>Active Base</th><th>New Acts</th><th>Net Adds</th><th>Share</th><th>Status</th></tr></thead><tbody id="tb_sm"><tr><td class="tn">East</td>
+      <td><div style="color:var(--text);font-weight:600">3,94,352</div><div class="bbar"><div class="bfill" style="width:77px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--teal);font-weight:600">9,240</td>
+      <td class="neg">-13,737</td>
+      <td><span class="tag tag-b">22%</span></td>
+      <td><span class="tag tag-r">↓ Churn</span></td></tr><tr><td class="tn">MTN</td>
+      <td><div style="color:var(--text);font-weight:600">2,94,781</div><div class="bbar"><div class="bfill" style="width:58px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--teal);font-weight:600">1,973</td>
+      <td class="neg">-2,067</td>
+      <td><span class="tag tag-b">17%</span></td>
+      <td><span class="tag tag-r">↓ Churn</span></td></tr><tr><td class="tn">NCR</td>
+      <td><div style="color:var(--text);font-weight:600">50,845</div><div class="bbar"><div class="bfill" style="width:10px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--teal);font-weight:600">199</td>
+      <td class="neg">-3,100</td>
+      <td><span class="tag tag-b">3%</span></td>
+      <td><span class="tag tag-r">↓ Churn</span></td></tr><tr><td class="tn">RON</td>
+      <td><div style="color:var(--text);font-weight:600">1,29,185</div><div class="bbar"><div class="bfill" style="width:25px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--teal);font-weight:600">1,118</td>
+      <td class="neg">-4,716</td>
+      <td><span class="tag tag-b">7%</span></td>
+      <td><span class="tag tag-r">↓ Churn</span></td></tr><tr><td class="tn">ROW</td>
+      <td><div style="color:var(--text);font-weight:600">4,09,207</div><div class="bbar"><div class="bfill" style="width:80px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--teal);font-weight:600">4,316</td>
+      <td class="neg">-14,257</td>
+      <td><span class="tag tag-b">23%</span></td>
+      <td><span class="tag tag-r">↓ Churn</span></td></tr><tr><td class="tn">South I</td>
+      <td><div style="color:var(--text);font-weight:600">1,59,593</div><div class="bbar"><div class="bfill" style="width:31px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--teal);font-weight:600">738</td>
+      <td class="neg">-4,958</td>
+      <td><span class="tag tag-b">9%</span></td>
+      <td><span class="tag tag-r">↓ Churn</span></td></tr><tr><td class="tn">South II</td>
+      <td><div style="color:var(--text);font-weight:600">2,84,177</div><div class="bbar"><div class="bfill" style="width:56px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--teal);font-weight:600">2,234</td>
+      <td class="neg">-11,481</td>
+      <td><span class="tag tag-b">16%</span></td>
+      <td><span class="tag tag-r">↓ Churn</span></td></tr><tr><td class="tn">UP</td>
+      <td><div style="color:var(--text);font-weight:600">34,459</div><div class="bbar"><div class="bfill" style="width:7px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--teal);font-weight:600">2,030</td>
+      <td class="neg">-480</td>
+      <td><span class="tag tag-b">2%</span></td>
+      <td><span class="tag tag-r">↓ Churn</span></td></tr><tr style="border-top:2px solid var(--border2);background:rgba(79,142,247,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td><div style="color:#4f8ef7;font-weight:800">17,56,599</div></td>
+    <td style="color:var(--teal);font-weight:800">21,848</td>
+    <td class="neg" style="font-weight:800">-54,796</td>
+    <td><span class="tag tag-b">100%</span></td>
+    <td>—</td></tr></tbody></table>
+      </div></div>
+      <div class="g66">
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">New Activations by Region</div></div></div><div class="cw h250"><canvas id="c_sm_act" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas></div></div>
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">Net Adds by Region</div><div class="cc-s">Green = growth · Red = churn</div></div></div><div class="cw h250"><canvas id="c_sm_net" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- NEW ACTIVATIONS -->
+    <div class="pg" id="pg-na">
+      <div class="dv"><div class="dv-l">CATV New Activations</div><div class="dv-line"></div><div class="dv-b db-b" id="dv-catv-na">4 Regions · Total 2,703</div></div>
+      <div class="g66">
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">HD vs SD by Region</div><div class="cc-s" id="catv-hd-pct-sub">99% HD dominant</div></div></div>
+          <div class="leg"><div class="li"><div class="ls" style="background:var(--blue)"></div>HD</div><div class="li"><div class="ls" style="background:var(--blue2)"></div>SD</div></div>
+          <div class="cw h250"><canvas id="c_na_catv" height="341" style="display: block; box-sizing: border-box; height: 250px; width: 512px;" width="699"></canvas></div></div>
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">CATV New Activations Table</div></div></div>
+          <table class="dt"><thead><tr><th>Region</th><th>HD</th><th>SD</th><th>Total</th><th>Share</th></tr></thead><tbody id="tb_na_catv"><tr><td class="tn">MTN</td><td style="color:#4f8ef7;font-weight:600">1925</td><td style="color:#60a5fa">1</td>
+      <td><div style="font-weight:700;color:#93c5fd">1926</div><div class="bbar"><div class="bfill" style="width:80px;background:#4f8ef7"></div></div></td>
+      <td><span class="tag tag-b">71%</span></td></tr><tr><td class="tn">NCR</td><td style="color:#4f8ef7;font-weight:600">164</td><td style="color:#60a5fa">18</td>
+      <td><div style="font-weight:700;color:#93c5fd">182</div><div class="bbar"><div class="bfill" style="width:8px;background:#4f8ef7"></div></div></td>
+      <td><span class="tag tag-b">7%</span></td></tr><tr><td class="tn">ROW</td><td style="color:#4f8ef7;font-weight:600">503</td><td style="color:#60a5fa">3</td>
+      <td><div style="font-weight:700;color:#93c5fd">506</div><div class="bbar"><div class="bfill" style="width:21px;background:#4f8ef7"></div></div></td>
+      <td><span class="tag tag-b">19%</span></td></tr><tr><td class="tn">South I</td><td style="color:#4f8ef7;font-weight:600">89</td><td style="color:#60a5fa">0</td>
+      <td><div style="font-weight:700;color:#93c5fd">89</div><div class="bbar"><div class="bfill" style="width:4px;background:#4f8ef7"></div></div></td>
+      <td><span class="tag tag-b">3%</span></td></tr><tr style="border-top:2px solid var(--border2);background:rgba(79,142,247,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td style="color:#4f8ef7;font-weight:800">2,681</td>
+    <td style="color:#60a5fa;font-weight:800">22</td>
+    <td><div style="font-weight:800;color:#93c5fd">2,703</div></td>
+    <td><span class="tag tag-b">100%</span></td></tr></tbody></table></div>
+      </div>
+      <div class="dv"><div class="dv-l">HITS New Activations</div><div class="dv-line"></div><div class="dv-b db-t" id="dv-hits-na">8 Regions · Total 19,145</div></div>
+      <div class="g75">
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">HD vs SD by Region</div><div class="cc-s" id="hits-hd-pct-sub">HD:SD SD dominant</div></div></div>
+          <div class="leg"><div class="li"><div class="ls" style="background:var(--teal)"></div>HD</div><div class="li"><div class="ls" style="background:#0f766e"></div>SD</div></div>
+          <div class="cw h280"><canvas id="c_na_hits" height="382" style="display: block; box-sizing: border-box; height: 280px; width: 604px;" width="824"></canvas></div></div>
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">HITS Region Table</div></div></div>
+          <table class="dt"><thead><tr><th>Region</th><th>HD</th><th>SD</th><th>Total</th><th>HD%</th></tr></thead><tbody id="tb_na_hits"><tr><td class="tn">East</td><td style="color:#10d9c4;font-weight:600">2376</td><td style="color:#0f766e;font-weight:600">6864</td>
+      <td style="color:#2dd4bf;font-weight:700">9240</td><td><span class="tag tag-t">26%</span></td></tr><tr><td class="tn">MTN</td><td style="color:#10d9c4;font-weight:600">40</td><td style="color:#0f766e;font-weight:600">7</td>
+      <td style="color:#2dd4bf;font-weight:700">47</td><td><span class="tag tag-t">85%</span></td></tr><tr><td class="tn">NCR</td><td style="color:#10d9c4;font-weight:600">6</td><td style="color:#0f766e;font-weight:600">11</td>
+      <td style="color:#2dd4bf;font-weight:700">17</td><td><span class="tag tag-t">35%</span></td></tr><tr><td class="tn">RON</td><td style="color:#10d9c4;font-weight:600">430</td><td style="color:#0f766e;font-weight:600">688</td>
+      <td style="color:#2dd4bf;font-weight:700">1118</td><td><span class="tag tag-t">38%</span></td></tr><tr><td class="tn">ROW</td><td style="color:#10d9c4;font-weight:600">2855</td><td style="color:#0f766e;font-weight:600">955</td>
+      <td style="color:#2dd4bf;font-weight:700">3810</td><td><span class="tag tag-t">75%</span></td></tr><tr><td class="tn">South I</td><td style="color:#10d9c4;font-weight:600">370</td><td style="color:#0f766e;font-weight:600">279</td>
+      <td style="color:#2dd4bf;font-weight:700">649</td><td><span class="tag tag-t">57%</span></td></tr><tr><td class="tn">South II</td><td style="color:#10d9c4;font-weight:600">1721</td><td style="color:#0f766e;font-weight:600">513</td>
+      <td style="color:#2dd4bf;font-weight:700">2234</td><td><span class="tag tag-t">77%</span></td></tr><tr><td class="tn">UP</td><td style="color:#10d9c4;font-weight:600">1016</td><td style="color:#0f766e;font-weight:600">1014</td>
+      <td style="color:#2dd4bf;font-weight:700">2030</td><td><span class="tag tag-t">50%</span></td></tr><tr style="border-top:2px solid var(--border2);background:rgba(16,217,196,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td style="color:#10d9c4;font-weight:800">8,814</td>
+    <td style="color:#0f766e;font-weight:800">10,331</td>
+    <td style="color:#2dd4bf;font-weight:800">19,145</td>
+    <td><span class="tag tag-t">46%</span></td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ACTIVE BASE -->
+    <div class="pg" id="pg-ab">
+      <div class="krow k4">
+        <div class="kc b"><div class="kg-blob"></div><div class="kl">CATV Base</div><div class="kv" id="ab-kv-catv">4.78L</div><div class="km" id="ab-km-catv">4,78,391 subs</div><span class="ktag" id="ab-kt-catv">▼9,383 MoM</span></div>
+        <div class="kc t"><div class="kg-blob"></div><div class="kl">HITS Base</div><div class="kv" id="ab-kv-hits">12.78L</div><div class="km" id="ab-km-hits">12,78,208 subs</div><span class="ktag" id="ab-kt-hits">▼45,413 MoM</span></div>
+        <div class="kc a"><div class="kg-blob"></div><div class="kl">Combined</div><div class="kv" id="ab-kv-comb">17.57L</div><div class="km" id="ab-km-comb">17,56,599 total</div></div>
+        <div class="kc r"><div class="kg-blob"></div><div class="kl">Total MoM Decline</div><div class="kv" id="ab-kv-mom">-54,796</div><div class="km">Net subscriber loss</div></div>
+      </div>
+      <div class="gf"><div class="cc">
+        <div class="cc-h"><div><div class="cc-t">CATV — Current vs Last Month Base by Region</div></div></div>
+        <div class="leg"><div class="li"><div class="ls" style="background:var(--blue)"></div>Current</div><div class="li"><div class="ls" style="background:var(--blue2)"></div>Last Month</div></div>
+        <div class="cw h220"><canvas id="c_ab_catv" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas></div>
+      </div></div>
+      <div class="gf"><div class="cc">
+        <div class="cc-h"><div><div class="cc-t">HITS — Current vs Last Month Base by Region</div></div></div>
+        <div class="leg"><div class="li"><div class="ls" style="background:var(--teal)"></div>Current</div><div class="li"><div class="ls" style="background:#0f766e"></div>Last Month</div></div>
+        <div class="cw h250"><canvas id="c_ab_hits" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas></div>
+      </div></div>
+      <div class="g66">
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">CATV Active Base Detail</div></div></div>
+          <table class="dt"><thead><tr><th>Region</th><th>Current</th><th>Last Month</th><th>MoM Change</th><th>Share</th></tr></thead><tbody id="tb_ab_catv"><tr><td class="tn">MTN</td>
+      <td><div style="color:#4f8ef7;font-weight:700">2,89,541</div><div class="bbar"><div class="bfill" style="width:80px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--t3)">2,91,541</td>
+      <td class="neg">-2,000</td><td><span class="tag tag-b">61%</span></td></tr><tr><td class="tn">NCR</td>
+      <td><div style="color:#4f8ef7;font-weight:700">46,713</div><div class="bbar"><div class="bfill" style="width:13px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--t3)">49,249</td>
+      <td class="neg">-2,536</td><td><span class="tag tag-b">10%</span></td></tr><tr><td class="tn">ROW</td>
+      <td><div style="color:#4f8ef7;font-weight:700">88,182</div><div class="bbar"><div class="bfill" style="width:24px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--t3)">90,187</td>
+      <td class="neg">-2,005</td><td><span class="tag tag-b">18%</span></td></tr><tr><td class="tn">South I</td>
+      <td><div style="color:#4f8ef7;font-weight:700">53,955</div><div class="bbar"><div class="bfill" style="width:15px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--t3)">56,797</td>
+      <td class="neg">-2,842</td><td><span class="tag tag-b">11%</span></td></tr><tr style="border-top:2px solid var(--border2);background:rgba(79,142,247,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td><div style="color:#4f8ef7;font-weight:800">4,78,391</div></td>
+    <td style="color:var(--t3);font-weight:700">4,87,774</td>
+    <td class="neg" style="font-weight:800">-9,383</td>
+    <td><span class="tag tag-b">100%</span></td></tr></tbody></table></div>
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">HITS Active Base Detail</div></div></div>
+          <table class="dt"><thead><tr><th>Region</th><th>Current</th><th>Last Month</th><th>MoM Change</th><th>Share</th></tr></thead><tbody id="tb_ab_hits"><tr><td class="tn">East</td>
+      <td><div style="color:#10d9c4;font-weight:700">3,94,352</div><div class="bbar"><div class="bfill" style="width:80px;background:#10d9c4"></div></div></td>
+      <td style="color:var(--t3)">4,08,089</td>
+      <td class="neg">-13,737</td><td><span class="tag tag-t">31%</span></td></tr><tr><td class="tn">MTN</td>
+      <td><div style="color:#10d9c4;font-weight:700">5,240</div><div class="bbar"><div class="bfill" style="width:1px;background:#10d9c4"></div></div></td>
+      <td style="color:var(--t3)">5,307</td>
+      <td class="neg">-67</td><td><span class="tag tag-t">0%</span></td></tr><tr><td class="tn">NCR</td>
+      <td><div style="color:#10d9c4;font-weight:700">4,132</div><div class="bbar"><div class="bfill" style="width:1px;background:#10d9c4"></div></div></td>
+      <td style="color:var(--t3)">4,696</td>
+      <td class="neg">-564</td><td><span class="tag tag-t">0%</span></td></tr><tr><td class="tn">RON</td>
+      <td><div style="color:#10d9c4;font-weight:700">1,29,185</div><div class="bbar"><div class="bfill" style="width:26px;background:#10d9c4"></div></div></td>
+      <td style="color:var(--t3)">1,33,901</td>
+      <td class="neg">-4,716</td><td><span class="tag tag-t">10%</span></td></tr><tr><td class="tn">ROW</td>
+      <td><div style="color:#10d9c4;font-weight:700">3,21,025</div><div class="bbar"><div class="bfill" style="width:65px;background:#10d9c4"></div></div></td>
+      <td style="color:var(--t3)">3,33,277</td>
+      <td class="neg">-12,252</td><td><span class="tag tag-t">25%</span></td></tr><tr><td class="tn">South I</td>
+      <td><div style="color:#10d9c4;font-weight:700">1,05,638</div><div class="bbar"><div class="bfill" style="width:21px;background:#10d9c4"></div></div></td>
+      <td style="color:var(--t3)">1,07,754</td>
+      <td class="neg">-2,116</td><td><span class="tag tag-t">8%</span></td></tr><tr><td class="tn">South II</td>
+      <td><div style="color:#10d9c4;font-weight:700">2,84,177</div><div class="bbar"><div class="bfill" style="width:58px;background:#10d9c4"></div></div></td>
+      <td style="color:var(--t3)">2,95,658</td>
+      <td class="neg">-11,481</td><td><span class="tag tag-t">22%</span></td></tr><tr><td class="tn">UP</td>
+      <td><div style="color:#10d9c4;font-weight:700">34,459</div><div class="bbar"><div class="bfill" style="width:7px;background:#10d9c4"></div></div></td>
+      <td style="color:var(--t3)">34,939</td>
+      <td class="neg">-480</td><td><span class="tag tag-t">3%</span></td></tr><tr style="border-top:2px solid var(--border2);background:rgba(16,217,196,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td><div style="color:#10d9c4;font-weight:800">12,78,208</div></td>
+    <td style="color:var(--t3);font-weight:700">13,23,621</td>
+    <td class="neg" style="font-weight:800">-45,413</td>
+    <td><span class="tag tag-t">100%</span></td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- NET ADDS -->
+    <div class="pg" id="pg-nr">
+      <div class="krow k2" style="grid-template-columns:1fr 1fr;">
+        <div class="kc r"><div class="kg-blob"></div><div class="kl">Total Net Adds</div><div class="kv" id="nr-kv-total">-54,796</div><div class="km">vs last month · 8 regions</div></div>
+        <div class="kc a"><div class="kg-blob"></div><div class="kl">Worst Decline</div><div class="kv" id="nr-kv-bot">ROW -14,257</div><div class="km" id="nr-km-bot">Base: 4,09,207 · New: 4,316</div></div>
+      </div>
+      <div class="g66">
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">Net Adds by Region</div><div class="cc-s">Green = growth · Red = churn</div></div></div><div class="cw h280"><canvas id="c_nr_bar" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas></div></div>
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">HITS Base — Current vs Last Month</div></div></div>
+          <div class="leg"><div class="li"><div class="ls" style="background:var(--teal)"></div>Current</div><div class="li"><div class="ls" style="background:#0f766e"></div>Last Month</div></div>
+          <div class="cw h260"><canvas id="c_nr_comp" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas></div></div>
+      </div>
+      <div class="gf"><div class="cc">
+        <div class="cc-h"><div><div class="cc-t">Net Adds Full Detail</div></div></div>
+        <table class="dt"><thead><tr><th>Region</th><th>Active Base</th><th>New Acts</th><th>Net Adds</th><th>MoM %</th><th>Status</th></tr></thead><tbody id="tb_nr"><tr><td class="tn">East</td>
+      <td style="color:var(--text);font-weight:600">3,94,352</td>
+      <td style="color:#10d9c4;font-weight:600">9,240</td>
+      <td class="neg">-13,737</td>
+      <td class="neg">-3.4%</td>
+      <td><span class="tag tag-r">↓ Decline</span></td></tr><tr><td class="tn">MTN</td>
+      <td style="color:var(--text);font-weight:600">2,94,781</td>
+      <td style="color:#10d9c4;font-weight:600">1,973</td>
+      <td class="neg">-2,067</td>
+      <td class="neg">-38.9%</td>
+      <td><span class="tag tag-r">↓ Decline</span></td></tr><tr><td class="tn">NCR</td>
+      <td style="color:var(--text);font-weight:600">50,845</td>
+      <td style="color:#10d9c4;font-weight:600">199</td>
+      <td class="neg">-3,100</td>
+      <td class="neg">-66.0%</td>
+      <td><span class="tag tag-r">↓ Decline</span></td></tr><tr><td class="tn">RON</td>
+      <td style="color:var(--text);font-weight:600">1,29,185</td>
+      <td style="color:#10d9c4;font-weight:600">1,118</td>
+      <td class="neg">-4,716</td>
+      <td class="neg">-3.5%</td>
+      <td><span class="tag tag-r">↓ Decline</span></td></tr><tr><td class="tn">ROW</td>
+      <td style="color:var(--text);font-weight:600">4,09,207</td>
+      <td style="color:#10d9c4;font-weight:600">4,316</td>
+      <td class="neg">-14,257</td>
+      <td class="neg">-4.3%</td>
+      <td><span class="tag tag-r">↓ Decline</span></td></tr><tr><td class="tn">South I</td>
+      <td style="color:var(--text);font-weight:600">1,59,593</td>
+      <td style="color:#10d9c4;font-weight:600">738</td>
+      <td class="neg">-4,958</td>
+      <td class="neg">-4.6%</td>
+      <td><span class="tag tag-r">↓ Decline</span></td></tr><tr><td class="tn">South II</td>
+      <td style="color:var(--text);font-weight:600">2,84,177</td>
+      <td style="color:#10d9c4;font-weight:600">2,234</td>
+      <td class="neg">-11,481</td>
+      <td class="neg">-3.9%</td>
+      <td><span class="tag tag-r">↓ Decline</span></td></tr><tr><td class="tn">UP</td>
+      <td style="color:var(--text);font-weight:600">34,459</td>
+      <td style="color:#10d9c4;font-weight:600">2,030</td>
+      <td class="neg">-480</td>
+      <td class="neg">-1.4%</td>
+      <td><span class="tag tag-r">↓ Decline</span></td></tr><tr style="border-top:2px solid var(--border2);background:rgba(79,142,247,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td style="color:var(--text);font-weight:800">17,56,599</td>
+    <td style="color:#10d9c4;font-weight:800">21,848</td>
+    <td class="neg" style="font-weight:800">-54,796</td>
+    <td class="neg" style="font-weight:800">-4.1%</td>
+    <td>—</td></tr></tbody></table>
+      </div></div>
+    </div>
+
+    <!-- CATV DETAIL -->
+    <div class="pg" id="pg-cv">
+      <div class="krow k4">
+        <div class="kc b"><div class="kg-blob"></div><div class="kl">Total New Acts</div><div class="kv" id="cv-kv1">2,703</div><div class="km">4 regions</div></div>
+        <div class="kc t"><div class="kg-blob"></div><div class="kl">HD Activations</div><div class="kv" id="cv-kv2">2,681</div><div class="km" id="cv-km2">99% share</div></div>
+        <div class="kc a"><div class="kg-blob"></div><div class="kl">SD Activations</div><div class="kv" id="cv-kv3">22</div><div class="km" id="cv-km3">1% share</div></div>
+        <div class="kc p"><div class="kg-blob"></div><div class="kl">Active Base</div><div class="kv" id="cv-kv4">4.78L</div><div class="km" id="cv-km4">MTN leads: 2.90L</div></div>
+      </div>
+      <div class="g66">
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">New Activations by Region</div></div></div>
+          <div class="leg"><div class="li"><div class="ls" style="background:var(--blue)"></div>HD</div><div class="li"><div class="ls" style="background:var(--blue2)"></div>SD</div></div>
+          <div class="cw h250"><canvas id="c_cv_act" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas></div></div>
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">Active Base Distribution</div></div></div><div class="cw h220"><canvas id="c_cv_dnt" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas></div></div>
+      </div>
+      <div class="gf"><div class="cc"><div class="cc-h"><div><div class="cc-t">CATV Complete Region Summary</div></div></div>
+        <table class="dt"><thead><tr><th>Region</th><th>HD New</th><th>SD New</th><th>Total New</th><th>Curr Base</th><th>Last Mth</th><th>MoM Change</th><th>Share</th></tr></thead><tbody id="tb_cv_full"><tr><td class="tn">MTN</td><td style="color:#4f8ef7;font-weight:600">1925</td><td style="color:#60a5fa">1</td>
+      <td style="color:#93c5fd;font-weight:700">1926</td>
+      <td style="color:var(--text);font-weight:600">2,89,541</td>
+      <td style="color:var(--t3)">2,91,541</td>
+      <td class="neg">-2,000</td>
+      <td><span class="tag tag-b">61%</span></td></tr><tr><td class="tn">NCR</td><td style="color:#4f8ef7;font-weight:600">164</td><td style="color:#60a5fa">18</td>
+      <td style="color:#93c5fd;font-weight:700">182</td>
+      <td style="color:var(--text);font-weight:600">46,713</td>
+      <td style="color:var(--t3)">49,249</td>
+      <td class="neg">-2,536</td>
+      <td><span class="tag tag-b">10%</span></td></tr><tr><td class="tn">ROW</td><td style="color:#4f8ef7;font-weight:600">503</td><td style="color:#60a5fa">3</td>
+      <td style="color:#93c5fd;font-weight:700">506</td>
+      <td style="color:var(--text);font-weight:600">88,182</td>
+      <td style="color:var(--t3)">90,187</td>
+      <td class="neg">-2,005</td>
+      <td><span class="tag tag-b">18%</span></td></tr><tr><td class="tn">South I</td><td style="color:#4f8ef7;font-weight:600">89</td><td style="color:#60a5fa">0</td>
+      <td style="color:#93c5fd;font-weight:700">89</td>
+      <td style="color:var(--text);font-weight:600">53,955</td>
+      <td style="color:var(--t3)">56,797</td>
+      <td class="neg">-2,842</td>
+      <td><span class="tag tag-b">11%</span></td></tr><tr style="border-top:2px solid var(--border2);background:rgba(79,142,247,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td style="color:#4f8ef7;font-weight:800">2,681</td>
+    <td style="color:#60a5fa;font-weight:800">22</td>
+    <td style="color:#93c5fd;font-weight:800">2,703</td>
+    <td style="color:var(--text);font-weight:800">4,78,391</td>
+    <td style="color:var(--t3);font-weight:700">4,87,774</td>
+    <td class="neg" style="font-weight:800">-9,383</td>
+    <td><span class="tag tag-b">100%</span></td></tr></tbody></table>
+      </div></div>
+    </div>
+
+    <!-- HITS DETAIL -->
+    <div class="pg" id="pg-ht">
+      <div class="krow k4">
+        <div class="kc t"><div class="kg-blob"></div><div class="kl">Total New Acts</div><div class="kv" id="ht-kv1">19,145</div><div class="km">8 regions</div></div>
+        <div class="kc b"><div class="kg-blob"></div><div class="kl">HD Activations</div><div class="kv" id="ht-kv2">8,814</div><div class="km" id="ht-km2">46% share</div></div>
+        <div class="kc a"><div class="kg-blob"></div><div class="kl">SD Activations</div><div class="kv" id="ht-kv3">10,331</div><div class="km" id="ht-km3">54% share</div></div>
+        <div class="kc p"><div class="kg-blob"></div><div class="kl">Active Base</div><div class="kv" id="ht-kv4">12.78L</div><div class="km" id="ht-km4">East leads: 3.94L</div></div>
+      </div>
+      <div class="g66">
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">New Activations — HD vs SD by Region</div></div></div>
+          <div class="leg"><div class="li"><div class="ls" style="background:var(--teal)"></div>HD</div><div class="li"><div class="ls" style="background:#0f766e"></div>SD</div></div>
+          <div class="cw h250"><canvas id="c_ht_act" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas></div></div>
+        <div class="cc"><div class="cc-h"><div><div class="cc-t">Active Base by Region</div></div></div><div class="cw h220"><canvas id="c_ht_dnt" height="0" style="display: block; box-sizing: border-box; height: 0px; width: 0px;" width="0"></canvas></div></div>
+      </div>
+      <div class="gf"><div class="cc"><div class="cc-h"><div><div class="cc-t">HITS Complete Region Summary</div></div></div>
+        <table class="dt"><thead><tr><th>Region</th><th>HD</th><th>SD</th><th>Total New</th><th>Curr Base</th><th>Last Mth</th><th>MoM Change</th><th>Share</th></tr></thead><tbody id="tb_ht_full"><tr><td class="tn">East</td><td style="color:#10d9c4;font-weight:600">2376</td><td style="color:#0f766e;font-weight:600">6864</td>
+      <td style="color:#2dd4bf;font-weight:700">9240</td>
+      <td style="color:var(--text);font-weight:600">3,94,352</td>
+      <td style="color:var(--t3)">4,08,089</td>
+      <td class="neg">-13,737</td>
+      <td><span class="tag tag-t">31%</span></td></tr><tr><td class="tn">MTN</td><td style="color:#10d9c4;font-weight:600">40</td><td style="color:#0f766e;font-weight:600">7</td>
+      <td style="color:#2dd4bf;font-weight:700">47</td>
+      <td style="color:var(--text);font-weight:600">5,240</td>
+      <td style="color:var(--t3)">5,307</td>
+      <td class="neg">-67</td>
+      <td><span class="tag tag-t">0%</span></td></tr><tr><td class="tn">NCR</td><td style="color:#10d9c4;font-weight:600">6</td><td style="color:#0f766e;font-weight:600">11</td>
+      <td style="color:#2dd4bf;font-weight:700">17</td>
+      <td style="color:var(--text);font-weight:600">4,132</td>
+      <td style="color:var(--t3)">4,696</td>
+      <td class="neg">-564</td>
+      <td><span class="tag tag-t">0%</span></td></tr><tr><td class="tn">RON</td><td style="color:#10d9c4;font-weight:600">430</td><td style="color:#0f766e;font-weight:600">688</td>
+      <td style="color:#2dd4bf;font-weight:700">1118</td>
+      <td style="color:var(--text);font-weight:600">1,29,185</td>
+      <td style="color:var(--t3)">1,33,901</td>
+      <td class="neg">-4,716</td>
+      <td><span class="tag tag-t">10%</span></td></tr><tr><td class="tn">ROW</td><td style="color:#10d9c4;font-weight:600">2855</td><td style="color:#0f766e;font-weight:600">955</td>
+      <td style="color:#2dd4bf;font-weight:700">3810</td>
+      <td style="color:var(--text);font-weight:600">3,21,025</td>
+      <td style="color:var(--t3)">3,33,277</td>
+      <td class="neg">-12,252</td>
+      <td><span class="tag tag-t">25%</span></td></tr><tr><td class="tn">South I</td><td style="color:#10d9c4;font-weight:600">370</td><td style="color:#0f766e;font-weight:600">279</td>
+      <td style="color:#2dd4bf;font-weight:700">649</td>
+      <td style="color:var(--text);font-weight:600">1,05,638</td>
+      <td style="color:var(--t3)">1,07,754</td>
+      <td class="neg">-2,116</td>
+      <td><span class="tag tag-t">8%</span></td></tr><tr><td class="tn">South II</td><td style="color:#10d9c4;font-weight:600">1721</td><td style="color:#0f766e;font-weight:600">513</td>
+      <td style="color:#2dd4bf;font-weight:700">2234</td>
+      <td style="color:var(--text);font-weight:600">2,84,177</td>
+      <td style="color:var(--t3)">2,95,658</td>
+      <td class="neg">-11,481</td>
+      <td><span class="tag tag-t">22%</span></td></tr><tr><td class="tn">UP</td><td style="color:#10d9c4;font-weight:600">1016</td><td style="color:#0f766e;font-weight:600">1014</td>
+      <td style="color:#2dd4bf;font-weight:700">2030</td>
+      <td style="color:var(--text);font-weight:600">34,459</td>
+      <td style="color:var(--t3)">34,939</td>
+      <td class="neg">-480</td>
+      <td><span class="tag tag-t">3%</span></td></tr><tr style="border-top:2px solid var(--border2);background:rgba(16,217,196,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td style="color:#10d9c4;font-weight:800">8,814</td>
+    <td style="color:#0f766e;font-weight:800">10,331</td>
+    <td style="color:#2dd4bf;font-weight:800">19,145</td>
+    <td style="color:var(--text);font-weight:800">12,78,208</td>
+    <td style="color:var(--t3);font-weight:700">13,23,621</td>
+    <td class="neg" style="font-weight:800">-45,413</td>
+    <td><span class="tag tag-t">100%</span></td></tr></tbody></table>
+      </div></div>
+    </div>
+
+
+    <!-- ══ AOP TARGET vs ACHIEVEMENT ══ -->
+    <div class="pg" id="pg-aop">
+      <div class="krow k4">
+        <div class="kc p"><div class="kg-blob"></div><div class="kl">Total Target (May 26)</div><div class="kv" id="aop-kv-target">18,46,861</div><div class="km" id="aop-km-target">Combined AOP target</div></div>
+        <div class="kc b"><div class="kg-blob"></div><div class="kl">Total Achievement</div><div class="kv" id="aop-kv-ach">17,56,599</div><div class="km" id="aop-km-ach">▼ Below target</div></div>
+        <div class="kc g"><div class="kg-blob"></div><div class="kl">Overall Achievement %</div><div class="kv" id="aop-kv-pct">95.1%</div><div class="km">vs AOP target</div></div>
+        <div class="kc t"><div class="kg-blob"></div><div class="kl">Regions Above Target</div><div class="kv" id="aop-kv-above">1/8</div><div class="km" id="aop-km-above">UP</div></div>
+      </div>
+
+      <div class="g75">
+        <div class="cc">
+          <div class="cc-h"><div><div class="cc-t">Target vs Achievement by Region</div><div class="cc-s">AOP May 2026 · Active Base — Target vs Achievement</div></div></div>
+          <div class="leg">
+            <div class="li"><div class="ls" style="background:var(--purple)"></div>Target</div>
+            <div class="li"><div class="ls" style="background:var(--blue)"></div>Achievement</div>
+          </div>
+          <div class="cw h280"><canvas id="c_aop_bar" height="382" style="display: block; box-sizing: border-box; height: 280px; width: 604px;" width="824"></canvas></div>
+        </div>
+        <div class="cc">
+          <div class="cc-h"><div><div class="cc-t">Achievement % by Region</div><div class="cc-s">100% line = on target</div></div></div>
+          <div class="cw h280"><canvas id="c_aop_pct" height="382" style="display: block; box-sizing: border-box; height: 280px; width: 420px;" width="573"></canvas></div>
+        </div>
+      </div>
+
+      <div class="gf">
+        <div class="cc">
+          <div class="cc-h"><div><div class="cc-t">AOP Target vs Achievement — Full Detail</div><div class="cc-s">Regions above 100% are on/above AOP target</div></div></div>
+          <table class="dt">
+            <thead><tr><th>Region</th><th>AOP Target</th><th>Achievement</th><th>Variance</th><th>Achievement %</th><th>Status</th></tr></thead>
+            <tbody id="tb_aop"><tr>
+      <td class="tn">East</td>
+      <td style="color:var(--purple);font-weight:600">4,04,391</td>
+      <td style="color:var(--blue);font-weight:700">3,94,352</td>
+      <td class="neg">-10,039</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="background:rgba(255,255,255,.06);border-radius:3px;height:6px;width:80px;flex-shrink:0;">
+            <div style="height:6px;border-radius:3px;width:65.33333333333333px;background:var(--red)"></div>
+          </div>
+          <span style="font-weight:700;color:var(--red)">97.5%</span>
+        </div>
+      </td>
+      <td><span class="tag tag-r">✗ Below</span></td>
+    </tr><tr>
+      <td class="tn">MTN</td>
+      <td style="color:var(--purple);font-weight:600">3,12,911</td>
+      <td style="color:var(--blue);font-weight:700">2,94,781</td>
+      <td class="neg">-18,130</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="background:rgba(255,255,255,.06);border-radius:3px;height:6px;width:80px;flex-shrink:0;">
+            <div style="height:6px;border-radius:3px;width:62.666666666666664px;background:var(--red)"></div>
+          </div>
+          <span style="font-weight:700;color:var(--red)">94.2%</span>
+        </div>
+      </td>
+      <td><span class="tag tag-r">✗ Below</span></td>
+    </tr><tr>
+      <td class="tn">NCR</td>
+      <td style="color:var(--purple);font-weight:600">54,884</td>
+      <td style="color:var(--blue);font-weight:700">50,845</td>
+      <td class="neg">-4,039</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="background:rgba(255,255,255,.06);border-radius:3px;height:6px;width:80px;flex-shrink:0;">
+            <div style="height:6px;border-radius:3px;width:62px;background:var(--red)"></div>
+          </div>
+          <span style="font-weight:700;color:var(--red)">92.6%</span>
+        </div>
+      </td>
+      <td><span class="tag tag-r">✗ Below</span></td>
+    </tr><tr>
+      <td class="tn">RON</td>
+      <td style="color:var(--purple);font-weight:600">1,29,654</td>
+      <td style="color:var(--blue);font-weight:700">1,29,185</td>
+      <td class="neg">-469</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="background:rgba(255,255,255,.06);border-radius:3px;height:6px;width:80px;flex-shrink:0;">
+            <div style="height:6px;border-radius:3px;width:66.66666666666667px;background:var(--red)"></div>
+          </div>
+          <span style="font-weight:700;color:var(--red)">99.6%</span>
+        </div>
+      </td>
+      <td><span class="tag tag-r">✗ Below</span></td>
+    </tr><tr>
+      <td class="tn">ROW</td>
+      <td style="color:var(--purple);font-weight:600">4,42,874</td>
+      <td style="color:var(--blue);font-weight:700">4,09,207</td>
+      <td class="neg">-33,667</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="background:rgba(255,255,255,.06);border-radius:3px;height:6px;width:80px;flex-shrink:0;">
+            <div style="height:6px;border-radius:3px;width:61.333333333333336px;background:var(--red)"></div>
+          </div>
+          <span style="font-weight:700;color:var(--red)">92.4%</span>
+        </div>
+      </td>
+      <td><span class="tag tag-r">✗ Below</span></td>
+    </tr><tr>
+      <td class="tn">South I</td>
+      <td style="color:var(--purple);font-weight:600">1,67,457</td>
+      <td style="color:var(--blue);font-weight:700">1,59,593</td>
+      <td class="neg">-7,864</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="background:rgba(255,255,255,.06);border-radius:3px;height:6px;width:80px;flex-shrink:0;">
+            <div style="height:6px;border-radius:3px;width:63.33333333333333px;background:var(--red)"></div>
+          </div>
+          <span style="font-weight:700;color:var(--red)">95.3%</span>
+        </div>
+      </td>
+      <td><span class="tag tag-r">✗ Below</span></td>
+    </tr><tr>
+      <td class="tn">South II</td>
+      <td style="color:var(--purple);font-weight:600">3,00,879</td>
+      <td style="color:var(--blue);font-weight:700">2,84,177</td>
+      <td class="neg">-16,702</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="background:rgba(255,255,255,.06);border-radius:3px;height:6px;width:80px;flex-shrink:0;">
+            <div style="height:6px;border-radius:3px;width:62.666666666666664px;background:var(--red)"></div>
+          </div>
+          <span style="font-weight:700;color:var(--red)">94.4%</span>
+        </div>
+      </td>
+      <td><span class="tag tag-r">✗ Below</span></td>
+    </tr><tr class="hl-row">
+      <td class="tn">UP</td>
+      <td style="color:var(--purple);font-weight:600">33,811</td>
+      <td style="color:var(--green);font-weight:700">34,459</td>
+      <td class="pos">+648</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="background:rgba(255,255,255,.06);border-radius:3px;height:6px;width:80px;flex-shrink:0;">
+            <div style="height:6px;border-radius:3px;width:68px;background:var(--green)"></div>
+          </div>
+          <span style="font-weight:700;color:var(--green)">101.9%</span>
+        </div>
+      </td>
+      <td><span class="tag tag-g">✓ On Target</span></td>
+    </tr><tr style="border-top:1px solid var(--border2);">
+    <td class="tn" style="font-weight:700">Grand Total</td>
+    <td style="color:var(--purple);font-weight:700">18,46,861</td>
+    <td style="color:var(--blue);font-weight:700">17,56,599</td>
+    <td class="neg">-90,262</td>
+    <td><span style="font-weight:700;color:var(--red)">95.1%</span></td>
+    <td><span class="tag tag-a">⚠ Behind</span></td>
+  </tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="g66">
+        <div class="cc">
+          <div class="cc-h"><div><div class="cc-t">Above Target Regions</div><div class="cc-s">Achievement ≥ 100%</div></div></div>
+          <div class="cw h220"><canvas id="c_aop_above" height="300" style="display: block; box-sizing: border-box; height: 220px; width: 512px;" width="699"></canvas></div>
+        </div>
+        <div class="cc">
+          <div class="cc-h"><div><div class="cc-t">Below Target Regions</div><div class="cc-s">Achievement &lt; 100%</div></div></div>
+          <div class="cw h220"><canvas id="c_aop_below" height="300" style="display: block; box-sizing: border-box; height: 220px; width: 512px;" width="699"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ══ DATA EDITOR MODAL ══ -->
+<div class="modal-overlay" id="editorModal">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-hd-title">✏️ Edit Dashboard Data</div>
+      <div class="modal-hd-right">
+        <button class="modal-close" onclick="closeEditor()">✕ Close</button>
+      </div>
+    </div>
+    <div class="modal-tabs">
+      <button class="mtab" onclick="switchTab('catv-new',this)">CATV New Acts</button>
+      <button class="mtab" onclick="switchTab('hits-new',this)">HITS New Acts</button>
+      <button class="mtab" onclick="switchTab('catv-base',this)">CATV Base</button>
+      <button class="mtab" onclick="switchTab('hits-base',this)">HITS Base</button>
+      <button class="mtab" onclick="switchTab('summary',this)">Summary</button>
+      <button class="mtab" onclick="switchTab('aop-edit',this)">AOP Targets</button>
+      <button class="mtab on" onclick="switchTab('settings',this)">⚙ Settings</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- CATV NEW -->
+      <div class="editor-section" id="tab-catv-new">
+        <div class="editor-hint">Edit CATV new activations per region. <strong>Total</strong> is auto-calculated from HD + SD when you click Apply.</div>
+        <table class="editor-table">
+          <thead><tr><th>Region</th><th>HD</th><th>SD</th><th>Total (auto)</th></tr></thead>
+          <tbody id="ed-catv-new"><tr><td>MTN</td>
+      <td><input class="ei" id="cn-hd-0" value="1925" style="width:90px"></td>
+      <td><input class="ei" id="cn-sd-0" value="1" style="width:90px"></td>
+      <td style="color:var(--t2)" id="cn-tot-0">1926</td></tr><tr><td>NCR</td>
+      <td><input class="ei" id="cn-hd-1" value="164" style="width:90px"></td>
+      <td><input class="ei" id="cn-sd-1" value="18" style="width:90px"></td>
+      <td style="color:var(--t2)" id="cn-tot-1">182</td></tr><tr><td>ROW</td>
+      <td><input class="ei" id="cn-hd-2" value="503" style="width:90px"></td>
+      <td><input class="ei" id="cn-sd-2" value="3" style="width:90px"></td>
+      <td style="color:var(--t2)" id="cn-tot-2">506</td></tr><tr><td>South I</td>
+      <td><input class="ei" id="cn-hd-3" value="89" style="width:90px"></td>
+      <td><input class="ei" id="cn-sd-3" value="0" style="width:90px"></td>
+      <td style="color:var(--t2)" id="cn-tot-3">89</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- HITS NEW -->
+      <div class="editor-section" id="tab-hits-new">
+        <div class="editor-hint">Edit HITS new activations per region. Total is auto-calculated.</div>
+        <table class="editor-table">
+          <thead><tr><th>Region</th><th>HD</th><th>SD</th><th>Total (auto)</th></tr></thead>
+          <tbody id="ed-hits-new"><tr><td>East</td>
+      <td><input class="ei" id="hn-hd-0" value="2376" style="width:90px"></td>
+      <td><input class="ei" id="hn-sd-0" value="6864" style="width:90px"></td>
+      <td style="color:var(--t2)" id="hn-tot-0">9240</td></tr><tr><td>MTN</td>
+      <td><input class="ei" id="hn-hd-1" value="40" style="width:90px"></td>
+      <td><input class="ei" id="hn-sd-1" value="7" style="width:90px"></td>
+      <td style="color:var(--t2)" id="hn-tot-1">47</td></tr><tr><td>NCR</td>
+      <td><input class="ei" id="hn-hd-2" value="6" style="width:90px"></td>
+      <td><input class="ei" id="hn-sd-2" value="11" style="width:90px"></td>
+      <td style="color:var(--t2)" id="hn-tot-2">17</td></tr><tr><td>RON</td>
+      <td><input class="ei" id="hn-hd-3" value="430" style="width:90px"></td>
+      <td><input class="ei" id="hn-sd-3" value="688" style="width:90px"></td>
+      <td style="color:var(--t2)" id="hn-tot-3">1118</td></tr><tr><td>ROW</td>
+      <td><input class="ei" id="hn-hd-4" value="2855" style="width:90px"></td>
+      <td><input class="ei" id="hn-sd-4" value="955" style="width:90px"></td>
+      <td style="color:var(--t2)" id="hn-tot-4">3810</td></tr><tr><td>South I</td>
+      <td><input class="ei" id="hn-hd-5" value="370" style="width:90px"></td>
+      <td><input class="ei" id="hn-sd-5" value="279" style="width:90px"></td>
+      <td style="color:var(--t2)" id="hn-tot-5">649</td></tr><tr><td>South II</td>
+      <td><input class="ei" id="hn-hd-6" value="1721" style="width:90px"></td>
+      <td><input class="ei" id="hn-sd-6" value="513" style="width:90px"></td>
+      <td style="color:var(--t2)" id="hn-tot-6">2234</td></tr><tr><td>UP</td>
+      <td><input class="ei" id="hn-hd-7" value="1016" style="width:90px"></td>
+      <td><input class="ei" id="hn-sd-7" value="1014" style="width:90px"></td>
+      <td style="color:var(--t2)" id="hn-tot-7">2030</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- CATV BASE -->
+      <div class="editor-section" id="tab-catv-base">
+        <div class="editor-hint">Edit CATV active base. <strong>Last Month</strong> is used for MoM change calculation.</div>
+        <table class="editor-table">
+          <thead><tr><th>Region</th><th>Current Base</th><th>Last Month Base</th><th>MoM Change (auto)</th></tr></thead>
+          <tbody id="ed-catv-base"><tr><td>MTN</td>
+      <td><input class="ei" id="cb-cur-0" value="289541" style="width:110px"></td>
+      <td><input class="ei" id="cb-lm-0" value="291541" style="width:110px"></td>
+      <td style="color:var(--red)" id="cb-chg-0">-2,000</td></tr><tr><td>NCR</td>
+      <td><input class="ei" id="cb-cur-1" value="46713" style="width:110px"></td>
+      <td><input class="ei" id="cb-lm-1" value="49249" style="width:110px"></td>
+      <td style="color:var(--red)" id="cb-chg-1">-2,536</td></tr><tr><td>ROW</td>
+      <td><input class="ei" id="cb-cur-2" value="88182" style="width:110px"></td>
+      <td><input class="ei" id="cb-lm-2" value="90187" style="width:110px"></td>
+      <td style="color:var(--red)" id="cb-chg-2">-2,005</td></tr><tr><td>South I</td>
+      <td><input class="ei" id="cb-cur-3" value="53955" style="width:110px"></td>
+      <td><input class="ei" id="cb-lm-3" value="56797" style="width:110px"></td>
+      <td style="color:var(--red)" id="cb-chg-3">-2,842</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- HITS BASE -->
+      <div class="editor-section" id="tab-hits-base">
+        <div class="editor-hint">Edit HITS active base. Last Month is used for MoM change calculation.</div>
+        <table class="editor-table">
+          <thead><tr><th>Region</th><th>Current Base</th><th>Last Month Base</th><th>MoM Change (auto)</th></tr></thead>
+          <tbody id="ed-hits-base"><tr><td>East</td>
+      <td><input class="ei" id="hb-cur-0" value="394352" style="width:110px"></td>
+      <td><input class="ei" id="hb-lm-0" value="408089" style="width:110px"></td>
+      <td style="color:var(--red)" id="hb-chg-0">-13,737</td></tr><tr><td>MTN</td>
+      <td><input class="ei" id="hb-cur-1" value="5240" style="width:110px"></td>
+      <td><input class="ei" id="hb-lm-1" value="5307" style="width:110px"></td>
+      <td style="color:var(--red)" id="hb-chg-1">-67</td></tr><tr><td>NCR</td>
+      <td><input class="ei" id="hb-cur-2" value="4132" style="width:110px"></td>
+      <td><input class="ei" id="hb-lm-2" value="4696" style="width:110px"></td>
+      <td style="color:var(--red)" id="hb-chg-2">-564</td></tr><tr><td>RON</td>
+      <td><input class="ei" id="hb-cur-3" value="129185" style="width:110px"></td>
+      <td><input class="ei" id="hb-lm-3" value="133901" style="width:110px"></td>
+      <td style="color:var(--red)" id="hb-chg-3">-4,716</td></tr><tr><td>ROW</td>
+      <td><input class="ei" id="hb-cur-4" value="321025" style="width:110px"></td>
+      <td><input class="ei" id="hb-lm-4" value="333277" style="width:110px"></td>
+      <td style="color:var(--red)" id="hb-chg-4">-12,252</td></tr><tr><td>South I</td>
+      <td><input class="ei" id="hb-cur-5" value="105638" style="width:110px"></td>
+      <td><input class="ei" id="hb-lm-5" value="107754" style="width:110px"></td>
+      <td style="color:var(--red)" id="hb-chg-5">-2,116</td></tr><tr><td>South II</td>
+      <td><input class="ei" id="hb-cur-6" value="284177" style="width:110px"></td>
+      <td><input class="ei" id="hb-lm-6" value="295658" style="width:110px"></td>
+      <td style="color:var(--red)" id="hb-chg-6">-11,481</td></tr><tr><td>UP</td>
+      <td><input class="ei" id="hb-cur-7" value="34459" style="width:110px"></td>
+      <td><input class="ei" id="hb-lm-7" value="34939" style="width:110px"></td>
+      <td style="color:var(--red)" id="hb-chg-7">-480</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- SUMMARY -->
+      <div class="editor-section" id="tab-summary">
+        <div class="editor-hint">Edit the Summary sheet values directly. Net Adds = Active Base − Last Month Base (auto-calculated from HITS base if not overridden).</div>
+        <table class="editor-table">
+          <thead><tr><th>Region</th><th>Active Base</th><th>New Activations</th><th>Net Adds</th></tr></thead>
+          <tbody id="ed-summary"><tr><td>East</td>
+      <td><input class="ei" id="sm-base-0" value="394352" style="width:110px"></td>
+      <td><input class="ei" id="sm-new-0" value="9240" style="width:90px"></td>
+      <td><input class="ei" id="sm-net-0" value="-13737" style="width:100px"></td></tr><tr><td>MTN</td>
+      <td><input class="ei" id="sm-base-1" value="294781" style="width:110px"></td>
+      <td><input class="ei" id="sm-new-1" value="1973" style="width:90px"></td>
+      <td><input class="ei" id="sm-net-1" value="-2067" style="width:100px"></td></tr><tr><td>NCR</td>
+      <td><input class="ei" id="sm-base-2" value="50845" style="width:110px"></td>
+      <td><input class="ei" id="sm-new-2" value="199" style="width:90px"></td>
+      <td><input class="ei" id="sm-net-2" value="-3100" style="width:100px"></td></tr><tr><td>RON</td>
+      <td><input class="ei" id="sm-base-3" value="129185" style="width:110px"></td>
+      <td><input class="ei" id="sm-new-3" value="1118" style="width:90px"></td>
+      <td><input class="ei" id="sm-net-3" value="-4716" style="width:100px"></td></tr><tr><td>ROW</td>
+      <td><input class="ei" id="sm-base-4" value="409207" style="width:110px"></td>
+      <td><input class="ei" id="sm-new-4" value="4316" style="width:90px"></td>
+      <td><input class="ei" id="sm-net-4" value="-14257" style="width:100px"></td></tr><tr><td>South I</td>
+      <td><input class="ei" id="sm-base-5" value="159593" style="width:110px"></td>
+      <td><input class="ei" id="sm-new-5" value="738" style="width:90px"></td>
+      <td><input class="ei" id="sm-net-5" value="-4958" style="width:100px"></td></tr><tr><td>South II</td>
+      <td><input class="ei" id="sm-base-6" value="284177" style="width:110px"></td>
+      <td><input class="ei" id="sm-new-6" value="2234" style="width:90px"></td>
+      <td><input class="ei" id="sm-net-6" value="-11481" style="width:100px"></td></tr><tr><td>UP</td>
+      <td><input class="ei" id="sm-base-7" value="34459" style="width:110px"></td>
+      <td><input class="ei" id="sm-new-7" value="2030" style="width:90px"></td>
+      <td><input class="ei" id="sm-net-7" value="-480" style="width:100px"></td></tr></tbody>
+        </table>
+      </div>
+
+
+      <!-- AOP EDIT -->
+      <div class="editor-section" id="tab-aop-edit">
+        <div class="editor-hint">Edit AOP targets and achievements for May 2026. Achievement % is auto-calculated.</div>
+        <table class="editor-table">
+          <thead><tr><th>Region</th><th>AOP Target</th><th>Achievement</th><th>Achievement % (auto)</th></tr></thead>
+          <tbody id="ed-aop"><tr><td>East</td>
+      <td><input class="ei" id="aop-tgt-0" value="404391" style="width:110px"></td>
+      <td><input class="ei" id="aop-ach-0" value="394352" style="width:110px"></td>
+      <td style="color:var(--red);font-weight:700" id="aop-pct-0">97.5%</td></tr><tr><td>MTN</td>
+      <td><input class="ei" id="aop-tgt-1" value="312911" style="width:110px"></td>
+      <td><input class="ei" id="aop-ach-1" value="294781" style="width:110px"></td>
+      <td style="color:var(--red);font-weight:700" id="aop-pct-1">94.2%</td></tr><tr><td>NCR</td>
+      <td><input class="ei" id="aop-tgt-2" value="54884" style="width:110px"></td>
+      <td><input class="ei" id="aop-ach-2" value="50845" style="width:110px"></td>
+      <td style="color:var(--red);font-weight:700" id="aop-pct-2">92.6%</td></tr><tr><td>RON</td>
+      <td><input class="ei" id="aop-tgt-3" value="129654" style="width:110px"></td>
+      <td><input class="ei" id="aop-ach-3" value="129185" style="width:110px"></td>
+      <td style="color:var(--red);font-weight:700" id="aop-pct-3">99.6%</td></tr><tr><td>ROW</td>
+      <td><input class="ei" id="aop-tgt-4" value="442874" style="width:110px"></td>
+      <td><input class="ei" id="aop-ach-4" value="409207" style="width:110px"></td>
+      <td style="color:var(--red);font-weight:700" id="aop-pct-4">92.4%</td></tr><tr><td>South I</td>
+      <td><input class="ei" id="aop-tgt-5" value="167457" style="width:110px"></td>
+      <td><input class="ei" id="aop-ach-5" value="159593" style="width:110px"></td>
+      <td style="color:var(--red);font-weight:700" id="aop-pct-5">95.3%</td></tr><tr><td>South II</td>
+      <td><input class="ei" id="aop-tgt-6" value="300879" style="width:110px"></td>
+      <td><input class="ei" id="aop-ach-6" value="284177" style="width:110px"></td>
+      <td style="color:var(--red);font-weight:700" id="aop-pct-6">94.4%</td></tr><tr><td>UP</td>
+      <td><input class="ei" id="aop-tgt-7" value="33811" style="width:110px"></td>
+      <td><input class="ei" id="aop-ach-7" value="34459" style="width:110px"></td>
+      <td style="color:var(--green);font-weight:700" id="aop-pct-7">101.9%</td></tr></tbody>
+        </table>
+      </div>
+      <!-- SETTINGS -->
+      <div class="editor-section on" id="tab-settings">
+        <div class="editor-hint">Update the report date displayed across the dashboard.</div>
+        <table class="editor-table">
+          <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>Report Date</td><td><input class="ei" id="set-date" value="29 May 2026" style="width:200px"></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <div style="font-size:11px;color:var(--t3);">Changes apply to all charts and tables instantly</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="closeEditor()">Cancel</button>
+        <button class="btn btn-primary" onclick="applyChanges()">✓ Apply &amp; Refresh Dashboard</button>
+        <button class="btn btn-green" onclick="applyChanges();saveAsHTML()">💾 Apply &amp; Save File</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EXPORT MODAL ══ -->
+<div class="modal-overlay" id="exportModal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-hd">
+      <div class="modal-hd-title">⬇ Export Data</div>
+      <button class="modal-close" onclick="closeExport()">✕ Close</button>
+    </div>
+    <div class="modal-body">
+      <div class="export-panel">
+        <div class="export-title">Choose what to export</div>
+        <div class="export-grid">
+          <div class="export-btn" onclick="exportCSV('catv-new')"><div class="export-icon">📋</div><div class="export-btn-title">CATV New Activations</div><div class="export-btn-sub">Region · HD · SD · Total</div></div>
+          <div class="export-btn" onclick="exportCSV('hits-new')"><div class="export-icon">📋</div><div class="export-btn-title">HITS New Activations</div><div class="export-btn-sub">Region · HD · SD · Total</div></div>
+          <div class="export-btn" onclick="exportCSV('catv-base')"><div class="export-icon">🗂</div><div class="export-btn-title">CATV Active Base</div><div class="export-btn-sub">Region · Current · Last Month · Change</div></div>
+          <div class="export-btn" onclick="exportCSV('hits-base')"><div class="export-icon">🗂</div><div class="export-btn-title">HITS Active Base</div><div class="export-btn-sub">Region · Current · Last Month · Change</div></div>
+          <div class="export-btn" onclick="exportCSV('summary')"><div class="export-icon">📊</div><div class="export-btn-title">Summary Report</div><div class="export-btn-sub">All regions · Base · New Acts · Net Adds</div></div>
+                    <div class="export-btn" onclick="exportCSV('aop')"><div class="export-icon">🎯</div><div class="export-btn-title">AOP Target vs Achievement</div><div class="export-btn-sub">Region · Target · Achievement · %</div></div>
+          <div class="export-btn" onclick="exportCSV('all')"><div class="export-icon">📦</div><div class="export-btn-title">Full Export (All Sheets)</div><div class="export-btn-sub">Everything in one CSV file</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot"><div style="font-size:11px;color:var(--t3);">Files download instantly to your device</div><button class="btn btn-secondary" onclick="closeExport()">Close</button></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="save-toast" id="toast"><span>✓</span><span id="toastMsg">✓ Dashboard updated with new data!</span></div>
+
+<script>
+/* ══ DEFAULT DATA ══ */
+let D = {
+  "reportDate": "18 June 2026",
+  "catvNew": [
+    {
+      "r": "MTN",
+      "sd": 1,
+      "hd": 1925,
+      "tot": 1926
+    },
+    {
+      "r": "NCR",
+      "sd": 18,
+      "hd": 164,
+      "tot": 182
+    },
+    {
+      "r": "ROW",
+      "sd": 3,
+      "hd": 503,
+      "tot": 506
+    },
+    {
+      "r": "South I",
+      "sd": 0,
+      "hd": 89,
+      "tot": 89
+    }
+  ],
+  "hitsNew": [
+    {
+      "r": "East",
+      "sd": 6864,
+      "hd": 2376,
+      "tot": 9240
+    },
+    {
+      "r": "MTN",
+      "sd": 7,
+      "hd": 40,
+      "tot": 47
+    },
+    {
+      "r": "NCR",
+      "sd": 11,
+      "hd": 6,
+      "tot": 17
+    },
+    {
+      "r": "RON",
+      "sd": 688,
+      "hd": 430,
+      "tot": 1118
+    },
+    {
+      "r": "ROW",
+      "sd": 955,
+      "hd": 2855,
+      "tot": 3810
+    },
+    {
+      "r": "South I",
+      "sd": 279,
+      "hd": 370,
+      "tot": 649
+    },
+    {
+      "r": "South II",
+      "sd": 513,
+      "hd": 1721,
+      "tot": 2234
+    },
+    {
+      "r": "UP",
+      "sd": 1014,
+      "hd": 1016,
+      "tot": 2030
+    }
+  ],
+  "catvBase": [
+    {
+      "r": "MTN",
+      "cur": 289541,
+      "lm": 291541
+    },
+    {
+      "r": "NCR",
+      "cur": 46713,
+      "lm": 49249
+    },
+    {
+      "r": "ROW",
+      "cur": 88182,
+      "lm": 90187
+    },
+    {
+      "r": "South I",
+      "cur": 53955,
+      "lm": 56797
+    }
+  ],
+  "hitsBase": [
+    {
+      "r": "East",
+      "cur": 394352,
+      "lm": 408089
+    },
+    {
+      "r": "MTN",
+      "cur": 5240,
+      "lm": 5307
+    },
+    {
+      "r": "NCR",
+      "cur": 4132,
+      "lm": 4696
+    },
+    {
+      "r": "RON",
+      "cur": 129185,
+      "lm": 133901
+    },
+    {
+      "r": "ROW",
+      "cur": 321025,
+      "lm": 333277
+    },
+    {
+      "r": "South I",
+      "cur": 105638,
+      "lm": 107754
+    },
+    {
+      "r": "South II",
+      "cur": 284177,
+      "lm": 295658
+    },
+    {
+      "r": "UP",
+      "cur": 34459,
+      "lm": 34939
+    }
+  ],
+  "summary": [
+    {
+      "r": "East",
+      "base": 394352,
+      "newAct": 9240,
+      "net": -13737
+    },
+    {
+      "r": "MTN",
+      "base": 294781,
+      "newAct": 1973,
+      "net": -2067
+    },
+    {
+      "r": "NCR",
+      "base": 50845,
+      "newAct": 199,
+      "net": -3100
+    },
+    {
+      "r": "RON",
+      "base": 129185,
+      "newAct": 1118,
+      "net": -4716
+    },
+    {
+      "r": "ROW",
+      "base": 409207,
+      "newAct": 4316,
+      "net": -14257
+    },
+    {
+      "r": "South I",
+      "base": 159593,
+      "newAct": 738,
+      "net": -4958
+    },
+    {
+      "r": "South II",
+      "base": 284177,
+      "newAct": 2234,
+      "net": -11481
+    },
+    {
+      "r": "UP",
+      "base": 34459,
+      "newAct": 2030,
+      "net": -480
+    }
+  ],
+  "aop": [
+    {
+      "r": "East",
+      "target": 404391,
+      "ach": 394352,
+      "pct": 97.51750162590166
+    },
+    {
+      "r": "MTN",
+      "target": 312911,
+      "ach": 294781,
+      "pct": 94.20602024217749
+    },
+    {
+      "r": "NCR",
+      "target": 54884,
+      "ach": 50845,
+      "pct": 92.64084250419066
+    },
+    {
+      "r": "RON",
+      "target": 129654,
+      "ach": 129185,
+      "pct": 99.63826800561495
+    },
+    {
+      "r": "ROW",
+      "target": 442874,
+      "ach": 409207,
+      "pct": 92.39806355758071
+    },
+    {
+      "r": "South I",
+      "target": 167457,
+      "ach": 159593,
+      "pct": 95.3038690529509
+    },
+    {
+      "r": "South II",
+      "target": 300879,
+      "ach": 284177,
+      "pct": 94.44893129796364
+    },
+    {
+      "r": "UP",
+      "target": 33811,
+      "ach": 34459,
+      "pct": 101.91653603856734
+    }
+  ]
+};
+
+/* ══ CHART INSTANCES ══ */
+let charts = {};
+const BP=['#4f8ef7','#1d4ed8','#60a5fa','#93c5fd'];
+const TP=['#10d9c4','#0f766e','#2dd4bf','#5eead4','#0d9488','#134e4a','#99f6e4','#ccfbf1'];
+const TT={backgroundColor:'#0f1929',borderColor:'rgba(255,255,255,.09)',borderWidth:1,titleColor:'#edf2ff',bodyColor:'#7a8baa',padding:10,cornerRadius:6};
+const GR={x:{grid:{color:'rgba(255,255,255,.035)'},ticks:{color:'#3a4f72',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.035)'},ticks:{color:'#3a4f72',font:{size:11}}}};
+const STK={x:{grid:{color:'rgba(255,255,255,.035)'},ticks:{color:'#3a4f72',font:{size:11}},stacked:true},y:{grid:{color:'rgba(255,255,255,.035)'},ticks:{color:'#3a4f72',font:{size:11}},stacked:true}};
+const BASE={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:TT}};
+
+function mkBar(id,labels,ds,stacked){
+  if(charts[id]){charts[id].destroy();}
+  charts[id]=new Chart(document.getElementById(id),{type:'bar',data:{labels,datasets:ds},options:{...BASE,scales:stacked?STK:GR}});
+}
+function mkDonut(id,labels,data,colors,pos='right'){
+  if(charts[id]){charts[id].destroy();}
+  charts[id]=new Chart(document.getElementById(id),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,hoverOffset:7}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:true,position:pos,labels:{color:'#7a8baa',font:{size:11},padding:8,boxWidth:10}},tooltip:TT}}});
+}
+function pct(v,t){return Math.round(v/t*100);}
+function sgn(v){return v>=0?'+':'';}
+function fmtL(n){return n>=100000?(n/100000).toFixed(2)+'L':n.toLocaleString('en-IN');}
+
+/* ══ RENDER ALL ══ */
+function renderAll(){
+  const d=D;
+  // update date labels
+  document.getElementById('reportDate').textContent=d.reportDate;
+  const fdEl=document.getElementById('footerDate');if(fdEl)fdEl.textContent=d.reportDate;
+  document.getElementById('chipDate').textContent=d.reportDate;
+
+  const catvTotNew=d.catvNew.reduce((a,b)=>a+b.tot,0);
+  const hitsTotNew=d.hitsNew.reduce((a,b)=>a+b.tot,0);
+  const catvTotHD=d.catvNew.reduce((a,b)=>a+b.hd,0);
+  const catvTotSD=d.catvNew.reduce((a,b)=>a+b.sd,0);
+  const hitsTotHD=d.hitsNew.reduce((a,b)=>a+b.hd,0);
+  const hitsTotSD=d.hitsNew.reduce((a,b)=>a+b.sd,0);
+  const catvTotBase=d.catvBase.reduce((a,b)=>a+b.cur,0);
+  const catvTotLM=d.catvBase.reduce((a,b)=>a+b.lm,0);
+  const hitsTotBase=d.hitsBase.reduce((a,b)=>a+b.cur,0);
+  const hitsTotLM=d.hitsBase.reduce((a,b)=>a+b.lm,0);
+  const combBase=catvTotBase+hitsTotBase;
+  const totalNew=catvTotNew+hitsTotNew;
+  const totalNet=d.summary.reduce((a,b)=>a+b.net,0);
+  const topR=d.summary.filter(x=>x.net>0).sort((a,b)=>b.net-a.net);
+  const botR=d.summary.filter(x=>x.net<0).sort((a,b)=>a.net-b.net)[0];
+
+  // sidebar badges
+  document.getElementById('nb-na').textContent=(totalNew/1000).toFixed(1)+'K';
+  document.getElementById('nb-ab').textContent=fmtL(combBase);
+  document.getElementById('nb-nr').textContent=sgn(totalNet)+(Math.abs(totalNet)/1000).toFixed(1)+'K';
+
+  // ── OVERVIEW KPIs
+  document.getElementById('kv-catv-new').textContent=catvTotNew.toLocaleString('en-IN');
+  document.getElementById('km-catv-new').textContent=d.catvNew.length+' active regions';
+  document.getElementById('kt-catv-new').textContent='HD: '+catvTotHD.toLocaleString('en-IN')+' · SD: '+catvTotSD.toLocaleString('en-IN');
+  document.getElementById('kv-hits-new').textContent=hitsTotNew.toLocaleString('en-IN');
+  document.getElementById('km-hits-new').textContent=d.hitsNew.length+' active regions';
+  document.getElementById('kt-hits-new').textContent='HD: '+hitsTotHD.toLocaleString('en-IN')+' · SD: '+hitsTotSD.toLocaleString('en-IN');
+  document.getElementById('kv-catv-base').textContent=fmtL(catvTotBase);
+  document.getElementById('km-catv-base').textContent=catvTotBase.toLocaleString('en-IN')+' subscribers';
+  document.getElementById('kt-catv-base').textContent=(catvTotBase-catvTotLM>=0?'▲':'▼')+Math.abs(catvTotBase-catvTotLM).toLocaleString('en-IN')+' vs last month';
+  document.getElementById('kv-hits-base').textContent=fmtL(hitsTotBase);
+  document.getElementById('km-hits-base').textContent=hitsTotBase.toLocaleString('en-IN')+' subscribers';
+  document.getElementById('kt-hits-base').textContent=(hitsTotBase-hitsTotLM>=0?'▲':'▼')+Math.abs(hitsTotBase-hitsTotLM).toLocaleString('en-IN')+' vs last month';
+  document.getElementById('ov-base-sub').textContent='Total: '+fmtL(combBase)+' · HITS '+pct(hitsTotBase,combBase)+'%';
+  document.getElementById('ov-catv-pct').textContent='CATV '+pct(catvTotBase,combBase)+'%';
+  document.getElementById('ov-hits-pct').textContent='HITS '+pct(hitsTotBase,combBase)+'%';
+  document.getElementById('ov-catv-base-sub').textContent=catvTotBase.toLocaleString('en-IN')+' total active';
+  document.getElementById('ov-hits-base-sub').textContent=hitsTotBase.toLocaleString('en-IN')+' total active';
+
+  // ── OVERVIEW CHARTS
+  const allR=[...new Set([...d.catvNew.map(x=>x.r),...d.hitsNew.map(x=>x.r)])].sort();
+  const cm={};d.catvNew.forEach(x=>cm[x.r]=x.tot);
+  const hm={};d.hitsNew.forEach(x=>hm[x.r]=x.tot);
+  mkBar('c_ov_bar',allR,[
+    {label:'CATV',data:allR.map(r=>cm[r]||0),backgroundColor:'#4f8ef7',borderRadius:5,barPercentage:.42,categoryPercentage:.75},
+    {label:'HITS',data:allR.map(r=>hm[r]||0),backgroundColor:'#10d9c4',borderRadius:5,barPercentage:.42,categoryPercentage:.75},
+  ]);
+  mkDonut('c_ov_dnt',['CATV','HITS'],[catvTotBase,hitsTotBase],['#4f8ef7','#10d9c4']);
+  mkDonut('c_ov_cpie',d.catvBase.map(x=>x.r),d.catvBase.map(x=>x.cur),BP);
+  mkDonut('c_ov_hpie',d.hitsBase.map(x=>x.r),d.hitsBase.map(x=>x.cur),TP);
+
+  // ── SUMMARY KPIs
+  document.getElementById('kv-comb').textContent=fmtL(combBase);
+  document.getElementById('km-comb').textContent=combBase.toLocaleString('en-IN')+' total';
+  document.getElementById('kv-total-new').textContent=totalNew.toLocaleString('en-IN');
+  document.getElementById('kv-total-net').textContent=sgn(totalNet)+totalNet.toLocaleString('en-IN');
+  if(botR){document.getElementById('kv-bot-region').textContent=botR.r;document.getElementById('km-bot-region').textContent='Net: '+botR.net.toLocaleString('en-IN');}
+
+  // summary table
+  const smTot=d.summary.reduce((a,b)=>a+b.base,0);
+  const maxBase=Math.max(...d.summary.map(x=>x.base));
+  let smHTML='';
+  d.summary.forEach(x=>{
+    const p=pct(x.base,smTot),bw=Math.round(x.base/maxBase*80),nc=x.net>=0?'pos':'neg',up=x.net>=0;
+    smHTML+=`<tr ${up?'class="hl-row"':''}><td class="tn">${x.r}</td>
+      <td><div style="color:var(--text);font-weight:600">${x.base.toLocaleString('en-IN')}</div><div class="bbar"><div class="bfill" style="width:${bw}px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--teal);font-weight:600">${x.newAct.toLocaleString('en-IN')}</td>
+      <td class="${nc}">${sgn(x.net)}${x.net.toLocaleString('en-IN')}</td>
+      <td><span class="tag tag-b">${p}%</span></td>
+      <td><span class="tag ${up?'tag-g':'tag-r'}">${up?'↑ Growth':'↓ Churn'}</span></td></tr>`;
+  });
+  const smTotNew=d.summary.reduce((a,b)=>a+b.newAct,0);
+  const smTotNet=d.summary.reduce((a,b)=>a+b.net,0);
+  smHTML+=`<tr style="border-top:2px solid var(--border2);background:rgba(79,142,247,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td><div style="color:#4f8ef7;font-weight:800">${smTot.toLocaleString('en-IN')}</div></td>
+    <td style="color:var(--teal);font-weight:800">${smTotNew.toLocaleString('en-IN')}</td>
+    <td class="${smTotNet>=0?'pos':'neg'}" style="font-weight:800">${sgn(smTotNet)}${smTotNet.toLocaleString('en-IN')}</td>
+    <td><span class="tag tag-b">100%</span></td>
+    <td>—</td></tr>`;
+  document.getElementById('tb_sm').innerHTML=smHTML;
+  mkBar('c_sm_act',d.summary.map(x=>x.r),[{label:'New',data:d.summary.map(x=>x.newAct),backgroundColor:'#10d9c4',borderRadius:5}]);
+  mkBar('c_sm_net',d.summary.map(x=>x.r),[{label:'Net',data:d.summary.map(x=>x.net),backgroundColor:d.summary.map(x=>x.net>=0?'rgba(52,211,153,.8)':'rgba(248,113,113,.8)'),borderRadius:5}]);
+
+  // ── NEW ACTIVATIONS
+  document.getElementById('dv-catv-na').textContent=d.catvNew.length+' Regions · Total '+catvTotNew.toLocaleString('en-IN');
+  document.getElementById('dv-hits-na').textContent=d.hitsNew.length+' Regions · Total '+hitsTotNew.toLocaleString('en-IN');
+  document.getElementById('catv-hd-pct-sub').textContent=Math.round(catvTotHD/catvTotNew*100)+'% HD dominant';
+  document.getElementById('hits-hd-pct-sub').textContent='HD:SD '+(hitsTotHD>hitsTotSD?hitsTotHD>hitsTotSD*1.2?'HD dominant':'near parity':'SD dominant');
+  mkBar('c_na_catv',d.catvNew.map(x=>x.r),[
+    {label:'HD',data:d.catvNew.map(x=>x.hd),backgroundColor:'#4f8ef7',borderRadius:5,stack:'s'},
+    {label:'SD',data:d.catvNew.map(x=>x.sd),backgroundColor:'#1d4ed8',borderRadius:5,stack:'s'},
+  ],true);
+  let cnaHTML='';
+  d.catvNew.forEach(x=>{
+    const p=pct(x.tot,catvTotNew),bw=Math.round(x.tot/d.catvNew[0].tot*80);
+    cnaHTML+=`<tr><td class="tn">${x.r}</td><td style="color:#4f8ef7;font-weight:600">${x.hd}</td><td style="color:#60a5fa">${x.sd}</td>
+      <td><div style="font-weight:700;color:#93c5fd">${x.tot}</div><div class="bbar"><div class="bfill" style="width:${bw}px;background:#4f8ef7"></div></div></td>
+      <td><span class="tag tag-b">${p}%</span></td></tr>`;
+  });
+  const cnaTotHD=d.catvNew.reduce((a,b)=>a+b.hd,0);
+  const cnaTotSD=d.catvNew.reduce((a,b)=>a+b.sd,0);
+  const cnaTot=cnaTotHD+cnaTotSD;
+  cnaHTML+=`<tr style="border-top:2px solid var(--border2);background:rgba(79,142,247,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td style="color:#4f8ef7;font-weight:800">${cnaTotHD.toLocaleString('en-IN')}</td>
+    <td style="color:#60a5fa;font-weight:800">${cnaTotSD.toLocaleString('en-IN')}</td>
+    <td><div style="font-weight:800;color:#93c5fd">${cnaTot.toLocaleString('en-IN')}</div></td>
+    <td><span class="tag tag-b">100%</span></td></tr>`;
+  document.getElementById('tb_na_catv').innerHTML=cnaHTML;
+  mkBar('c_na_hits',d.hitsNew.map(x=>x.r),[
+    {label:'HD',data:d.hitsNew.map(x=>x.hd),backgroundColor:'#10d9c4',borderRadius:5,stack:'s'},
+    {label:'SD',data:d.hitsNew.map(x=>x.sd),backgroundColor:'#0f766e',borderRadius:5,stack:'s'},
+  ],true);
+  let hnaHTML='';
+  d.hitsNew.forEach(x=>{
+    const hdp=Math.round(x.hd/x.tot*100);
+    hnaHTML+=`<tr><td class="tn">${x.r}</td><td style="color:#10d9c4;font-weight:600">${x.hd}</td><td style="color:#0f766e;font-weight:600">${x.sd}</td>
+      <td style="color:#2dd4bf;font-weight:700">${x.tot}</td><td><span class="tag tag-t">${hdp}%</span></td></tr>`;
+  });
+  const hnaTotHD=d.hitsNew.reduce((a,b)=>a+b.hd,0);
+  const hnaTotSD=d.hitsNew.reduce((a,b)=>a+b.sd,0);
+  const hnaTot=hnaTotHD+hnaTotSD;
+  const hnaTotHDP=hnaTot>0?Math.round(hnaTotHD/hnaTot*100):0;
+  hnaHTML+=`<tr style="border-top:2px solid var(--border2);background:rgba(16,217,196,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td style="color:#10d9c4;font-weight:800">${hnaTotHD.toLocaleString('en-IN')}</td>
+    <td style="color:#0f766e;font-weight:800">${hnaTotSD.toLocaleString('en-IN')}</td>
+    <td style="color:#2dd4bf;font-weight:800">${hnaTot.toLocaleString('en-IN')}</td>
+    <td><span class="tag tag-t">${hnaTotHDP}%</span></td></tr>`;
+  document.getElementById('tb_na_hits').innerHTML=hnaHTML;
+
+  // ── ACTIVE BASE
+  const catvMoM=catvTotBase-catvTotLM;
+  const hitsMoM=hitsTotBase-hitsTotLM;
+  document.getElementById('ab-kv-catv').textContent=fmtL(catvTotBase);
+  document.getElementById('ab-km-catv').textContent=catvTotBase.toLocaleString('en-IN')+' subs';
+  document.getElementById('ab-kt-catv').textContent=(catvMoM>=0?'▲':'▼')+Math.abs(catvMoM).toLocaleString('en-IN')+' MoM';
+  document.getElementById('ab-kv-hits').textContent=fmtL(hitsTotBase);
+  document.getElementById('ab-km-hits').textContent=hitsTotBase.toLocaleString('en-IN')+' subs';
+  document.getElementById('ab-kt-hits').textContent=(hitsMoM>=0?'▲':'▼')+Math.abs(hitsMoM).toLocaleString('en-IN')+' MoM';
+  document.getElementById('ab-kv-comb').textContent=fmtL(combBase);
+  document.getElementById('ab-km-comb').textContent=combBase.toLocaleString('en-IN')+' total';
+  document.getElementById('ab-kv-mom').textContent=sgn(catvMoM+hitsMoM)+(catvMoM+hitsMoM).toLocaleString('en-IN');
+  mkBar('c_ab_catv',d.catvBase.map(x=>x.r),[
+    {label:'Current',data:d.catvBase.map(x=>x.cur),backgroundColor:'#4f8ef7',borderRadius:5,barPercentage:.4},
+    {label:'Last Month',data:d.catvBase.map(x=>x.lm),backgroundColor:'#1d4ed8',borderRadius:5,barPercentage:.4},
+  ]);
+  mkBar('c_ab_hits',d.hitsBase.map(x=>x.r),[
+    {label:'Current',data:d.hitsBase.map(x=>x.cur),backgroundColor:'#10d9c4',borderRadius:5,barPercentage:.4},
+    {label:'Last Month',data:d.hitsBase.map(x=>x.lm),backgroundColor:'#0f766e',borderRadius:5,barPercentage:.4},
+  ]);
+  let cabHTML='';
+  d.catvBase.forEach(x=>{
+    const chg=x.cur-x.lm,p=pct(x.cur,catvTotBase),bw=Math.round(x.cur/d.catvBase[0].cur*80),nc=chg>=0?'pos':'neg';
+    cabHTML+=`<tr><td class="tn">${x.r}</td>
+      <td><div style="color:#4f8ef7;font-weight:700">${x.cur.toLocaleString('en-IN')}</div><div class="bbar"><div class="bfill" style="width:${bw}px;background:#4f8ef7"></div></div></td>
+      <td style="color:var(--t3)">${x.lm.toLocaleString('en-IN')}</td>
+      <td class="${nc}">${sgn(chg)}${chg.toLocaleString('en-IN')}</td><td><span class="tag tag-b">${p}%</span></td></tr>`;
+  });
+  const cabTotChg=catvTotBase-catvTotLM;
+  cabHTML+=`<tr style="border-top:2px solid var(--border2);background:rgba(79,142,247,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td><div style="color:#4f8ef7;font-weight:800">${catvTotBase.toLocaleString('en-IN')}</div></td>
+    <td style="color:var(--t3);font-weight:700">${catvTotLM.toLocaleString('en-IN')}</td>
+    <td class="${cabTotChg>=0?'pos':'neg'}" style="font-weight:800">${sgn(cabTotChg)}${cabTotChg.toLocaleString('en-IN')}</td>
+    <td><span class="tag tag-b">100%</span></td></tr>`;
+  document.getElementById('tb_ab_catv').innerHTML=cabHTML;
+  let habHTML='';
+  d.hitsBase.forEach(x=>{
+    const chg=x.cur-x.lm,p=pct(x.cur,hitsTotBase),bw=Math.round(x.cur/d.hitsBase[0].cur*80),nc=chg>=0?'pos':'neg';
+    habHTML+=`<tr><td class="tn">${x.r}</td>
+      <td><div style="color:#10d9c4;font-weight:700">${x.cur.toLocaleString('en-IN')}</div><div class="bbar"><div class="bfill" style="width:${bw}px;background:#10d9c4"></div></div></td>
+      <td style="color:var(--t3)">${x.lm.toLocaleString('en-IN')}</td>
+      <td class="${nc}">${sgn(chg)}${chg.toLocaleString('en-IN')}</td><td><span class="tag tag-t">${p}%</span></td></tr>`;
+  });
+  const habTotChg=hitsTotBase-hitsTotLM;
+  habHTML+=`<tr style="border-top:2px solid var(--border2);background:rgba(16,217,196,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td><div style="color:#10d9c4;font-weight:800">${hitsTotBase.toLocaleString('en-IN')}</div></td>
+    <td style="color:var(--t3);font-weight:700">${hitsTotLM.toLocaleString('en-IN')}</td>
+    <td class="${habTotChg>=0?'pos':'neg'}" style="font-weight:800">${sgn(habTotChg)}${habTotChg.toLocaleString('en-IN')}</td>
+    <td><span class="tag tag-t">100%</span></td></tr>`;
+  document.getElementById('tb_ab_hits').innerHTML=habHTML;
+
+  // ── NET ADDS
+  document.getElementById('nr-kv-total').textContent=sgn(totalNet)+totalNet.toLocaleString('en-IN');
+  if(botR){document.getElementById('nr-kv-bot').textContent=botR.r+' '+botR.net.toLocaleString('en-IN');document.getElementById('nr-km-bot').textContent='Base: '+botR.base.toLocaleString('en-IN')+' · New: '+botR.newAct.toLocaleString('en-IN');}
+  mkBar('c_nr_bar',d.summary.map(x=>x.r),[
+    {label:'Net',data:d.summary.map(x=>x.net),backgroundColor:d.summary.map(x=>x.net>=0?'rgba(52,211,153,.85)':'rgba(248,113,113,.85)'),borderRadius:5},
+  ]);
+  mkBar('c_nr_comp',d.hitsBase.map(x=>x.r),[
+    {label:'Current',data:d.hitsBase.map(x=>x.cur),backgroundColor:'#10d9c4',borderRadius:5,barPercentage:.4},
+    {label:'Last Month',data:d.hitsBase.map(x=>x.lm),backgroundColor:'#0f766e',borderRadius:5,barPercentage:.4},
+  ]);
+  const hitsLmMap={};d.hitsBase.forEach(x=>hitsLmMap[x.r]=x.lm);
+  let nrHTML='';
+  d.summary.forEach(x=>{
+    const nc=x.net>=0?'pos':'neg',up=x.net>=0;
+    const lm=hitsLmMap[x.r]||x.base-x.net;
+    const mp=lm>0?((x.net/lm)*100).toFixed(1):'—';
+    nrHTML+=`<tr ${up?'class="hl-row"':''}><td class="tn">${x.r}</td>
+      <td style="color:var(--text);font-weight:600">${x.base.toLocaleString('en-IN')}</td>
+      <td style="color:#10d9c4;font-weight:600">${x.newAct.toLocaleString('en-IN')}</td>
+      <td class="${nc}">${sgn(x.net)}${x.net.toLocaleString('en-IN')}</td>
+      <td class="${nc}">${mp}%</td>
+      <td><span class="tag ${up?'tag-g':'tag-r'}">${up?'↑ Growth':'↓ Decline'}</span></td></tr>`;
+  });
+  const nrTotBase=d.summary.reduce((a,b)=>a+b.base,0);
+  const nrTotNew=d.summary.reduce((a,b)=>a+b.newAct,0);
+  const nrTotNet=d.summary.reduce((a,b)=>a+b.net,0);
+  const nrTotLM=d.hitsBase.reduce((a,b)=>a+b.lm,0);
+  const nrTotMP=nrTotLM>0?((nrTotNet/nrTotLM)*100).toFixed(1):'—';
+  nrHTML+=`<tr style="border-top:2px solid var(--border2);background:rgba(79,142,247,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td style="color:var(--text);font-weight:800">${nrTotBase.toLocaleString('en-IN')}</td>
+    <td style="color:#10d9c4;font-weight:800">${nrTotNew.toLocaleString('en-IN')}</td>
+    <td class="${nrTotNet>=0?'pos':'neg'}" style="font-weight:800">${sgn(nrTotNet)}${nrTotNet.toLocaleString('en-IN')}</td>
+    <td class="${nrTotNet>=0?'pos':'neg'}" style="font-weight:800">${nrTotMP}%</td>
+    <td>—</td></tr>`;
+  document.getElementById('tb_nr').innerHTML=nrHTML;
+
+  // ── CATV DETAIL
+  const cvTotHD=d.catvNew.reduce((a,b)=>a+b.hd,0);
+  const cvTotSD=d.catvNew.reduce((a,b)=>a+b.sd,0);
+  const cvTot=cvTotHD+cvTotSD;
+  document.getElementById('cv-kv1').textContent=cvTot.toLocaleString('en-IN');
+  document.getElementById('cv-kv2').textContent=cvTotHD.toLocaleString('en-IN');
+  document.getElementById('cv-km2').textContent=Math.round(cvTotHD/cvTot*100)+'% share';
+  document.getElementById('cv-kv3').textContent=cvTotSD.toLocaleString('en-IN');
+  document.getElementById('cv-km3').textContent=Math.round(cvTotSD/cvTot*100)+'% share';
+  document.getElementById('cv-kv4').textContent=fmtL(catvTotBase);
+  const topCatv=d.catvBase.reduce((a,b)=>b.cur>a.cur?b:a);
+  document.getElementById('cv-km4').textContent=topCatv.r+' leads: '+fmtL(topCatv.cur);
+  mkBar('c_cv_act',d.catvNew.map(x=>x.r),[
+    {label:'HD',data:d.catvNew.map(x=>x.hd),backgroundColor:BP,borderRadius:5,stack:'s'},
+    {label:'SD',data:d.catvNew.map(x=>x.sd),backgroundColor:'#1d4ed8',borderRadius:5,stack:'s'},
+  ],true);
+  mkDonut('c_cv_dnt',d.catvBase.map(x=>x.r),d.catvBase.map(x=>x.cur),BP);
+  const cvNewMap={};d.catvNew.forEach(x=>cvNewMap[x.r]={hd:x.hd,sd:x.sd,tot:x.tot});
+  let cvHTML='';
+  d.catvBase.forEach(x=>{
+    const n=cvNewMap[x.r]||{hd:0,sd:0,tot:0},chg=x.cur-x.lm,p=pct(x.cur,catvTotBase),nc=chg>=0?'pos':'neg';
+    cvHTML+=`<tr><td class="tn">${x.r}</td><td style="color:#4f8ef7;font-weight:600">${n.hd}</td><td style="color:#60a5fa">${n.sd}</td>
+      <td style="color:#93c5fd;font-weight:700">${n.tot}</td>
+      <td style="color:var(--text);font-weight:600">${x.cur.toLocaleString('en-IN')}</td>
+      <td style="color:var(--t3)">${x.lm.toLocaleString('en-IN')}</td>
+      <td class="${nc}">${sgn(chg)}${chg.toLocaleString('en-IN')}</td>
+      <td><span class="tag tag-b">${p}%</span></td></tr>`;
+  });
+  const cvTotCur=d.catvBase.reduce((a,b)=>a+b.cur,0);
+  const cvTotLM2=d.catvBase.reduce((a,b)=>a+b.lm,0);
+  const cvTotChg=cvTotCur-cvTotLM2;
+  const cvTotNewHD=d.catvNew.reduce((a,b)=>a+b.hd,0);
+  const cvTotNewSD=d.catvNew.reduce((a,b)=>a+b.sd,0);
+  const cvTotNewTot=cvTotNewHD+cvTotNewSD;
+  cvHTML+=`<tr style="border-top:2px solid var(--border2);background:rgba(79,142,247,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td style="color:#4f8ef7;font-weight:800">${cvTotNewHD.toLocaleString('en-IN')}</td>
+    <td style="color:#60a5fa;font-weight:800">${cvTotNewSD.toLocaleString('en-IN')}</td>
+    <td style="color:#93c5fd;font-weight:800">${cvTotNewTot.toLocaleString('en-IN')}</td>
+    <td style="color:var(--text);font-weight:800">${cvTotCur.toLocaleString('en-IN')}</td>
+    <td style="color:var(--t3);font-weight:700">${cvTotLM2.toLocaleString('en-IN')}</td>
+    <td class="${cvTotChg>=0?'pos':'neg'}" style="font-weight:800">${sgn(cvTotChg)}${cvTotChg.toLocaleString('en-IN')}</td>
+    <td><span class="tag tag-b">100%</span></td></tr>`;
+  document.getElementById('tb_cv_full').innerHTML=cvHTML;
+
+  // ── HITS DETAIL
+  document.getElementById('ht-kv1').textContent=hitsTotNew.toLocaleString('en-IN');
+  document.getElementById('ht-kv2').textContent=hitsTotHD.toLocaleString('en-IN');
+  document.getElementById('ht-km2').textContent=Math.round(hitsTotHD/hitsTotNew*100)+'% share';
+  document.getElementById('ht-kv3').textContent=hitsTotSD.toLocaleString('en-IN');
+  document.getElementById('ht-km3').textContent=Math.round(hitsTotSD/hitsTotNew*100)+'% share';
+  document.getElementById('ht-kv4').textContent=fmtL(hitsTotBase);
+  const topHits=d.hitsBase.reduce((a,b)=>b.cur>a.cur?b:a);
+  document.getElementById('ht-km4').textContent=topHits.r+' leads: '+fmtL(topHits.cur);
+  mkBar('c_ht_act',d.hitsNew.map(x=>x.r),[
+    {label:'HD',data:d.hitsNew.map(x=>x.hd),backgroundColor:'#10d9c4',borderRadius:5,stack:'s'},
+    {label:'SD',data:d.hitsNew.map(x=>x.sd),backgroundColor:'#0f766e',borderRadius:5,stack:'s'},
+  ],true);
+  mkDonut('c_ht_dnt',d.hitsBase.map(x=>x.r),d.hitsBase.map(x=>x.cur),TP);
+  const htNewMap={};d.hitsNew.forEach(x=>htNewMap[x.r]={hd:x.hd,sd:x.sd,tot:x.tot});
+  let htHTML='';
+  d.hitsBase.forEach(x=>{
+    const n=htNewMap[x.r]||{hd:0,sd:0,tot:0},chg=x.cur-x.lm,p=pct(x.cur,hitsTotBase),nc=chg>=0?'pos':'neg';
+    htHTML+=`<tr><td class="tn">${x.r}</td><td style="color:#10d9c4;font-weight:600">${n.hd}</td><td style="color:#0f766e;font-weight:600">${n.sd}</td>
+      <td style="color:#2dd4bf;font-weight:700">${n.tot}</td>
+      <td style="color:var(--text);font-weight:600">${x.cur.toLocaleString('en-IN')}</td>
+      <td style="color:var(--t3)">${x.lm.toLocaleString('en-IN')}</td>
+      <td class="${nc}">${sgn(chg)}${chg.toLocaleString('en-IN')}</td>
+      <td><span class="tag tag-t">${p}%</span></td></tr>`;
+  });
+  const htTotCur=d.hitsBase.reduce((a,b)=>a+b.cur,0);
+  const htTotLM2=d.hitsBase.reduce((a,b)=>a+b.lm,0);
+  const htTotChg=htTotCur-htTotLM2;
+  const htTotNewHD=d.hitsNew.reduce((a,b)=>a+b.hd,0);
+  const htTotNewSD=d.hitsNew.reduce((a,b)=>a+b.sd,0);
+  const htTotNewTot=htTotNewHD+htTotNewSD;
+  htHTML+=`<tr style="border-top:2px solid var(--border2);background:rgba(16,217,196,.06);">
+    <td class="tn" style="font-weight:800;color:var(--text)">Total</td>
+    <td style="color:#10d9c4;font-weight:800">${htTotNewHD.toLocaleString('en-IN')}</td>
+    <td style="color:#0f766e;font-weight:800">${htTotNewSD.toLocaleString('en-IN')}</td>
+    <td style="color:#2dd4bf;font-weight:800">${htTotNewTot.toLocaleString('en-IN')}</td>
+    <td style="color:var(--text);font-weight:800">${htTotCur.toLocaleString('en-IN')}</td>
+    <td style="color:var(--t3);font-weight:700">${htTotLM2.toLocaleString('en-IN')}</td>
+    <td class="${htTotChg>=0?'pos':'neg'}" style="font-weight:800">${sgn(htTotChg)}${htTotChg.toLocaleString('en-IN')}</td>
+    <td><span class="tag tag-t">100%</span></td></tr>`;
+  document.getElementById('tb_ht_full').innerHTML=htHTML;
+}
+
+
+/* ══ AOP RENDER ══ */
+function renderAOP(){
+  const d=D.aop;
+  const totTarget=d.reduce((a,b)=>a+b.target,0);
+  const totAch=d.reduce((a,b)=>a+b.ach,0);
+  const ovPct=(totAch/totTarget*100).toFixed(1);
+  const aboveRegions=d.filter(x=>x.pct>=100);
+  const belowRegions=d.filter(x=>x.pct<100);
+
+  document.getElementById('aop-kv-target').textContent=totTarget.toLocaleString('en-IN');
+  document.getElementById('aop-km-target').textContent='Combined AOP target';
+  document.getElementById('aop-kv-ach').textContent=totAch.toLocaleString('en-IN');
+  document.getElementById('aop-km-ach').textContent=(totAch>totTarget?'▲ Exceeded':'▼ Below')+' target';
+  document.getElementById('aop-kv-pct').textContent=ovPct+'%';
+  document.getElementById('aop-kv-above').textContent=aboveRegions.length+'/'+d.length;
+  document.getElementById('aop-km-above').textContent=aboveRegions.map(x=>x.r).join(', ');
+
+  // Bar chart: target vs achievement
+  const TT2={backgroundColor:'#0f1929',borderColor:'rgba(255,255,255,.09)',borderWidth:1,titleColor:'#edf2ff',bodyColor:'#7a8baa',padding:10,cornerRadius:6};
+  const GR2={x:{grid:{color:'rgba(255,255,255,.035)'},ticks:{color:'#3a4f72',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.035)'},ticks:{color:'#3a4f72',font:{size:11}}}};
+  if(charts['c_aop_bar']) charts['c_aop_bar'].destroy();
+  charts['c_aop_bar']=new Chart(document.getElementById('c_aop_bar'),{
+    type:'bar',
+    data:{labels:d.map(x=>x.r),datasets:[
+      {label:'Target',data:d.map(x=>x.target),backgroundColor:'rgba(167,139,250,.55)',borderColor:'#a78bfa',borderWidth:1,borderRadius:4,barPercentage:.42},
+      {label:'Achievement',data:d.map(x=>x.ach),backgroundColor:d.map(x=>x.pct>=100?'rgba(52,211,153,.8)':'rgba(79,142,247,.8)'),borderRadius:4,barPercentage:.42},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:TT2},scales:GR2}
+  });
+
+  // Percentage bar chart with 100% line
+  const pctColors=d.map(x=>x.pct>=100?'rgba(52,211,153,.85)':'rgba(248,113,113,.75)');
+  if(charts['c_aop_pct']) charts['c_aop_pct'].destroy();
+  charts['c_aop_pct']=new Chart(document.getElementById('c_aop_pct'),{
+    type:'bar',
+    data:{labels:d.map(x=>x.r),datasets:[{label:'Achievement %',data:d.map(x=>x.pct),backgroundColor:pctColors,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:TT2,
+        annotation:{annotations:{line100:{type:'line',yMin:100,yMax:100,borderColor:'rgba(251,191,36,.6)',borderWidth:2,borderDash:[5,5]}}}},
+      scales:{x:{grid:{color:'rgba(255,255,255,.035)'},ticks:{color:'#3a4f72',font:{size:11}}},
+              y:{grid:{color:'rgba(255,255,255,.035)'},ticks:{color:'#3a4f72',font:{size:11},callback:v=>v+'%'},suggestedMin:85,suggestedMax:115}}}
+  });
+
+  // Above/below donuts
+  if(charts['c_aop_above']) charts['c_aop_above'].destroy();
+  charts['c_aop_above']=new Chart(document.getElementById('c_aop_above'),{
+    type:'doughnut',
+    data:{labels:aboveRegions.map(x=>x.r+' ('+x.pct.toFixed(1)+'%)'),datasets:[{data:aboveRegions.map(x=>x.ach),backgroundColor:['#34d399','#10d9c4','#4f8ef7','#a78bfa'].slice(0,aboveRegions.length),borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:true,position:'right',labels:{color:'#7a8baa',font:{size:11},padding:7,boxWidth:10}},tooltip:TT2}}
+  });
+  if(charts['c_aop_below']) charts['c_aop_below'].destroy();
+  charts['c_aop_below']=new Chart(document.getElementById('c_aop_below'),{
+    type:'doughnut',
+    data:{labels:belowRegions.map(x=>x.r+' ('+x.pct.toFixed(1)+'%)'),datasets:[{data:belowRegions.map(x=>x.ach),backgroundColor:['#f87171','#fb923c','#fbbf24','#f43f5e','#a78bfa'].slice(0,belowRegions.length),borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:true,position:'right',labels:{color:'#7a8baa',font:{size:11},padding:7,boxWidth:10}},tooltip:TT2}}
+  });
+
+  // Table
+  let html='';
+  const totVar=totAch-totTarget;
+  d.forEach(x=>{
+    const varVal=x.ach-x.target;
+    const above=x.pct>=100;
+    const nc=above?'pos':'neg';
+    const bar=Math.min(Math.round(x.pct),120);
+    html+=`<tr ${above?'class="hl-row"':''}>
+      <td class="tn">${x.r}</td>
+      <td style="color:var(--purple);font-weight:600">${Math.round(x.target).toLocaleString('en-IN')}</td>
+      <td style="color:${above?'var(--green)':'var(--blue)'};font-weight:700">${x.ach.toLocaleString('en-IN')}</td>
+      <td class="${nc}">${varVal>=0?'+':''}${Math.round(varVal).toLocaleString('en-IN')}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="background:rgba(255,255,255,.06);border-radius:3px;height:6px;width:80px;flex-shrink:0;">
+            <div style="height:6px;border-radius:3px;width:${Math.min(bar/120*80,80)}px;background:${above?'var(--green)':'var(--red)'}"></div>
+          </div>
+          <span style="font-weight:700;color:${above?'var(--green)':'var(--red)'}">${x.pct.toFixed(1)}%</span>
+        </div>
+      </td>
+      <td><span class="tag ${above?'tag-g':'tag-r'}">${above?'✓ On Target':'✗ Below'}</span></td>
+    </tr>`;
+  });
+  // Total row
+  html+=`<tr style="border-top:1px solid var(--border2);">
+    <td class="tn" style="font-weight:700">Grand Total</td>
+    <td style="color:var(--purple);font-weight:700">${Math.round(totTarget).toLocaleString('en-IN')}</td>
+    <td style="color:var(--blue);font-weight:700">${totAch.toLocaleString('en-IN')}</td>
+    <td class="${totVar>=0?'pos':'neg'}">${totVar>=0?'+':''}${Math.round(totVar).toLocaleString('en-IN')}</td>
+    <td><span style="font-weight:700;color:${parseFloat(ovPct)>=100?'var(--green)':'var(--red)'}">${ovPct}%</span></td>
+    <td><span class="tag ${parseFloat(ovPct)>=100?'tag-g':'tag-a'}">${parseFloat(ovPct)>=100?'✓ On Track':'⚠ Behind'}</span></td>
+  </tr>`;
+  document.getElementById('tb_aop').innerHTML=html;
+}
+
+/* ══ EDITOR ══ */
+function openEditor(){
+  if(!isAdmin){ promptAdmin(); return; }
+  populateEditor();
+  document.getElementById('editorModal').classList.add('open');
+}
+function closeEditor(){document.getElementById('editorModal').classList.remove('open');}
+
+function populateEditor(){ if(!isAdmin){ return; }
+  // CATV New
+  let h='';
+  D.catvNew.forEach((x,i)=>{
+    h+=`<tr><td>${x.r}</td>
+      <td><input class="ei" id="cn-hd-${i}" value="${x.hd}" style="width:90px"/></td>
+      <td><input class="ei" id="cn-sd-${i}" value="${x.sd}" style="width:90px"/></td>
+      <td style="color:var(--t2)" id="cn-tot-${i}">${x.tot}</td></tr>`;
+  });
+  document.getElementById('ed-catv-new').innerHTML=h;
+
+  // HITS New
+  let h2='';
+  D.hitsNew.forEach((x,i)=>{
+    h2+=`<tr><td>${x.r}</td>
+      <td><input class="ei" id="hn-hd-${i}" value="${x.hd}" style="width:90px"/></td>
+      <td><input class="ei" id="hn-sd-${i}" value="${x.sd}" style="width:90px"/></td>
+      <td style="color:var(--t2)" id="hn-tot-${i}">${x.tot}</td></tr>`;
+  });
+  document.getElementById('ed-hits-new').innerHTML=h2;
+
+  // CATV Base
+  let h3='';
+  D.catvBase.forEach((x,i)=>{
+    const chg=x.cur-x.lm,nc=chg>=0?'var(--green)':'var(--red)';
+    h3+=`<tr><td>${x.r}</td>
+      <td><input class="ei" id="cb-cur-${i}" value="${x.cur}" style="width:110px"/></td>
+      <td><input class="ei" id="cb-lm-${i}" value="${x.lm}" style="width:110px"/></td>
+      <td style="color:${nc}" id="cb-chg-${i}">${sgn(chg)}${chg.toLocaleString('en-IN')}</td></tr>`;
+  });
+  document.getElementById('ed-catv-base').innerHTML=h3;
+
+  // HITS Base
+  let h4='';
+  D.hitsBase.forEach((x,i)=>{
+    const chg=x.cur-x.lm,nc=chg>=0?'var(--green)':'var(--red)';
+    h4+=`<tr><td>${x.r}</td>
+      <td><input class="ei" id="hb-cur-${i}" value="${x.cur}" style="width:110px"/></td>
+      <td><input class="ei" id="hb-lm-${i}" value="${x.lm}" style="width:110px"/></td>
+      <td style="color:${nc}" id="hb-chg-${i}">${sgn(chg)}${chg.toLocaleString('en-IN')}</td></tr>`;
+  });
+  document.getElementById('ed-hits-base').innerHTML=h4;
+
+  // Summary
+  let h5='';
+  D.summary.forEach((x,i)=>{
+    h5+=`<tr><td>${x.r}</td>
+      <td><input class="ei" id="sm-base-${i}" value="${x.base}" style="width:110px"/></td>
+      <td><input class="ei" id="sm-new-${i}" value="${x.newAct}" style="width:90px"/></td>
+      <td><input class="ei" id="sm-net-${i}" value="${x.net}" style="width:100px"/></td></tr>`;
+  });
+  document.getElementById('ed-summary').innerHTML=h5;
+
+  document.getElementById('set-date').value=D.reportDate;
+  // AOP
+  let ha='';
+  D.aop.forEach((x,i)=>{
+    const p=(x.ach/x.target*100).toFixed(1);
+    const nc=parseFloat(p)>=100?'var(--green)':'var(--red)';
+    ha+=`<tr><td>${x.r}</td>
+      <td><input class="ei" id="aop-tgt-${i}" value="${Math.round(x.target)}" style="width:110px"/></td>
+      <td><input class="ei" id="aop-ach-${i}" value="${x.ach}" style="width:110px"/></td>
+      <td style="color:${nc};font-weight:700" id="aop-pct-${i}">${p}%</td></tr>`;
+  });
+  document.getElementById('ed-aop').innerHTML=ha;
+
+}
+
+function applyChanges(){ if(!isAdmin){ return; }
+  // Read CATV New
+  D.catvNew.forEach((x,i)=>{
+    x.hd=parseInt(document.getElementById('cn-hd-'+i).value)||0;
+    x.sd=parseInt(document.getElementById('cn-sd-'+i).value)||0;
+    x.tot=x.hd+x.sd;
+  });
+  // Read HITS New
+  D.hitsNew.forEach((x,i)=>{
+    x.hd=parseInt(document.getElementById('hn-hd-'+i).value)||0;
+    x.sd=parseInt(document.getElementById('hn-sd-'+i).value)||0;
+    x.tot=x.hd+x.sd;
+  });
+  // Read CATV Base
+  D.catvBase.forEach((x,i)=>{
+    x.cur=parseInt(document.getElementById('cb-cur-'+i).value)||0;
+    x.lm=parseInt(document.getElementById('cb-lm-'+i).value)||0;
+  });
+  // Read HITS Base
+  D.hitsBase.forEach((x,i)=>{
+    x.cur=parseInt(document.getElementById('hb-cur-'+i).value)||0;
+    x.lm=parseInt(document.getElementById('hb-lm-'+i).value)||0;
+  });
+  // Read Summary
+  D.summary.forEach((x,i)=>{
+    x.base=parseInt(document.getElementById('sm-base-'+i).value)||0;
+    x.newAct=parseInt(document.getElementById('sm-new-'+i).value)||0;
+    x.net=parseInt(document.getElementById('sm-net-'+i).value)||0;
+  });
+
+  // Read AOP
+  D.aop.forEach((x,i)=>{
+    x.target=parseInt(document.getElementById('aop-tgt-'+i).value)||0;
+    x.ach=parseInt(document.getElementById('aop-ach-'+i).value)||0;
+    x.pct=x.target>0?(x.ach/x.target*100):0;
+  });
+  // Settings
+  D.reportDate=document.getElementById('set-date').value;
+
+  closeEditor();
+  renderAll();
+  renderAOP();
+  showToast('✓ Dashboard updated with new data!');
+}
+
+function switchTab(id,btn){
+  document.querySelectorAll('.editor-section').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tab-'+id).classList.add('on');
+  btn.classList.add('on');
+}
+
+/* ══ EXPORT ══ */
+function openExport(){document.getElementById('exportModal').classList.add('open');}
+function closeExport(){document.getElementById('exportModal').classList.remove('open');}
+
+function exportCSV(type){
+  let rows=[], filename='DTV_Export.csv';
+  if(type==='catv-new'){
+    filename='CATV_New_Activations.csv';
+    rows=[['Region','HD','SD','Total'],...D.catvNew.map(x=>[x.r,x.hd,x.sd,x.tot])];
+  } else if(type==='hits-new'){
+    filename='HITS_New_Activations.csv';
+    rows=[['Region','HD','SD','Total'],...D.hitsNew.map(x=>[x.r,x.hd,x.sd,x.tot])];
+  } else if(type==='catv-base'){
+    filename='CATV_Active_Base.csv';
+    rows=[['Region','Current','Last Month','MoM Change'],...D.catvBase.map(x=>[x.r,x.cur,x.lm,x.cur-x.lm])];
+  } else if(type==='hits-base'){
+    filename='HITS_Active_Base.csv';
+    rows=[['Region','Current','Last Month','MoM Change'],...D.hitsBase.map(x=>[x.r,x.cur,x.lm,x.cur-x.lm])];
+  } else if(type==='summary'){
+    filename='DTV_Summary.csv';
+    rows=[['Region','Active Base','New Activations','Net Adds'],...D.summary.map(x=>[x.r,x.base,x.newAct,x.net])];
+  } else if(type==='aop'){
+    filename='AOP_Target_vs_Achievement.csv';
+    rows=[['Region','AOP Target','Achievement','Variance','Achievement %'],
+      ...D.aop.map(x=>[x.r,Math.round(x.target),x.ach,x.ach-Math.round(x.target),(x.pct).toFixed(2)+'%']),
+      ['Grand Total',Math.round(D.aop.reduce((a,b)=>a+b.target,0)),D.aop.reduce((a,b)=>a+b.ach,0),
+       D.aop.reduce((a,b)=>a+b.ach,0)-Math.round(D.aop.reduce((a,b)=>a+b.target,0)),
+       (D.aop.reduce((a,b)=>a+b.ach,0)/D.aop.reduce((a,b)=>a+b.target,0)*100).toFixed(2)+'%']
+    ];
+  } else if(type==='all'){
+    filename='DTV_Full_Export.csv';
+    rows=[
+      ['=== CATV NEW ACTIVATIONS ==='],['Region','HD','SD','Total'],...D.catvNew.map(x=>[x.r,x.hd,x.sd,x.tot]),[''],
+      ['=== HITS NEW ACTIVATIONS ==='],['Region','HD','SD','Total'],...D.hitsNew.map(x=>[x.r,x.hd,x.sd,x.tot]),[''],
+      ['=== CATV ACTIVE BASE ==='],['Region','Current','Last Month','MoM Change'],...D.catvBase.map(x=>[x.r,x.cur,x.lm,x.cur-x.lm]),[''],
+      ['=== HITS ACTIVE BASE ==='],['Region','Current','Last Month','MoM Change'],...D.hitsBase.map(x=>[x.r,x.cur,x.lm,x.cur-x.lm]),[''],
+      ['=== SUMMARY ==='],['Region','Active Base','New Activations','Net Adds'],...D.summary.map(x=>[x.r,x.base,x.newAct,x.net]),
+    ];
+  }
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename; a.click();
+  URL.revokeObjectURL(url);
+  closeExport();
+  showToast('⬇ '+filename+' downloaded!');
+}
+
+/* ══ SAVE AS HTML ══ */
+function saveAsHTML(){
+  // Serialize current D into the saved file so updated numbers are baked in
+  const dJson = JSON.stringify(D, null, 2);
+  let html = document.documentElement.outerHTML;
+  // Replace the let D = {...} block in the saved HTML with current live data
+  html = html.replace(/\/\* ══ DEFAULT DATA ══ \*\/\s*let D = \{[\s\S]*?\};/, '/* ══ DEFAULT DATA ══ */\nlet D = ' + dJson + ';');
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = D.reportDate.replace(/\s/g,'_');
+  a.href = url;
+  a.download = 'NXTDigital_DTV_'+dateStr+'.html';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('💾 Dashboard saved — share this file with viewers!');
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+  renderAOP();
+/* ══ NAVIGATION ══ */
+const titles={ov:'Overview',aop:'AOP Target vs Achievement',sm:'Summary',na:'New Activations',ab:'Active Base',nr:'Net Adds',cv:'CATV Detail',ht:'HITS Detail'};
+function go(id,btn){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.getElementById('pg-'+id).classList.add('on');
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('ptitle').innerHTML=titles[id]+' <em>/ NXT Digital &middot; DTV Performance</em>';
+}
+
+/* ══ INIT ══ */
+renderAll();
+
+/* ══ ADMIN AUTH ══ */
+const ADMIN_HASH = '4e9f3a8b2c1d7e6f'; // NXT@2026 marker (obfuscated check)
+let isAdmin = false;
+
+function _checkPw(pw){ return pw === atob('TlhUQDIwMjY='); }
+
+function tryLogin(){
+  const pw = document.getElementById('adminPwInput').value;
+  const errEl = document.getElementById('loginErr');
+  if(_checkPw(pw)){
+    isAdmin = true;
+    document.getElementById('lockOverlay').style.display = 'none';
+    applyAdminState();
+    showToast('🔓 Admin access granted');
+  } else {
+    errEl.textContent = '✗ Incorrect password. Please try again.';
+    const inp = document.getElementById('adminPwInput');
+    inp.classList.add('err');
+    inp.value = '';
+    setTimeout(()=>inp.classList.remove('err'), 500);
+  }
+}
+
+function continueAsViewer(){
+  isAdmin = false;
+  document.getElementById('lockOverlay').style.display = 'none';
+  applyViewerState();
+}
+
+function applyAdminState(){
+  // Session badge
+  document.getElementById('sessionBadge').className = 'admin-badge';
+  document.getElementById('sessionBadge').innerHTML = '⚡ Admin &nbsp;<span style="opacity:.6;font-weight:400">|</span>&nbsp; Logout';
+  document.getElementById('sessionBadge').onclick = ()=>document.getElementById('logoutOverlay').style.display='flex';
+  // Edit chip
+  const ec = document.getElementById('editChip');
+  ec.innerHTML = '✏️ Edit Data';
+  ec.classList.remove('btn-locked');
+  ec.onclick = openEditor;
+  // Sidebar edit button
+  const sb = document.getElementById('sideEditBtn');
+  if(sb){ sb.style.color='var(--teal)'; sb.classList.remove('btn-locked'); }
+  document.getElementById('editBadge').innerHTML = 'LIVE';
+  const ub2=document.getElementById('uploadBadge');if(ub2){ub2.innerHTML='LIVE';ub2.style.cssText='background:var(--purpleg);color:var(--purple);';}
+  document.getElementById('editBadge').style.cssText = 'background:var(--amberg);color:var(--amber);';
+}
+
+function applyViewerState(){
+  // Session badge
+  document.getElementById('sessionBadge').className = 'viewer-badge';
+  document.getElementById('sessionBadge').innerHTML = '👁 Viewer Mode';
+  document.getElementById('sessionBadge').onclick = ()=>document.getElementById('lockOverlay').style.display='flex';
+  // Edit chip locked
+  const ec = document.getElementById('editChip');
+  ec.innerHTML = '🔒 Edit Data';
+  ec.classList.add('btn-locked');
+  ec.onclick = promptAdmin;
+  // Sidebar
+  const sb = document.getElementById('sideEditBtn');
+  if(sb){ sb.style.color='var(--t3)'; }
+  document.getElementById('editBadge').innerHTML = '🔒 Admin';
+  const _ub2=document.getElementById('uploadBadge');if(_ub2){_ub2.innerHTML='🔒 Admin';_ub2.style.cssText='background:rgba(248,113,113,.15);color:var(--red)';}
+  document.getElementById('editBadge').style.cssText = 'background:rgba(248,113,113,.15);color:var(--red);';
+}
+
+function checkAdminThenEdit(){
+  if(isAdmin){ openEditor(); } else { promptAdmin(); }
+}
+
+function promptAdmin(){
+  document.getElementById('adminPwInput').value='';
+  document.getElementById('loginErr').textContent='';
+  document.getElementById('lockOverlay').style.display='flex';
+  setTimeout(()=>document.getElementById('adminPwInput').focus(), 100);
+}
+
+function cancelLogout(){ document.getElementById('logoutOverlay').style.display='none'; }
+function confirmLogout(){
+  isAdmin=false;
+  document.getElementById('logoutOverlay').style.display='none';
+  applyViewerState();
+  showToast('🔒 Logged out — Viewer mode');
+}
+
+function toggleEye(){
+  const inp=document.getElementById('adminPwInput');
+  const btn=document.getElementById('eyeBtn');
+  if(inp.type==='password'){ inp.type='text'; btn.textContent='🙈'; }
+  else { inp.type='password'; btn.textContent='👁'; }
+}
+
+// No auto-login on load — viewer mode by default
+window.addEventListener('load', ()=>{ applyViewerState(); });
+
+</script>
+
+
+<script>
+/* ══ UPLOAD DATA ══ */
+let parsedUploadData = null;
+
+function checkAdminThenUpload(){
+  if(!isAdmin){ promptAdmin(); return; }
+  openUpload();
+}
+function openUpload(){
+  document.getElementById('uploadModal').classList.add('open');
+  document.getElementById('uploadPreview').classList.remove('show');
+  document.getElementById('progressBar').classList.remove('show');
+  const btn=document.getElementById('applyUploadBtn');
+  btn.disabled=true; btn.style.opacity='0.4'; btn.style.cursor='not-allowed';
+  const btn2=document.getElementById('applyAndSaveBtn');
+  if(btn2){btn2.disabled=true; btn2.style.opacity='0.4'; btn2.style.cursor='not-allowed';}
+  parsedUploadData=null;
+}
+function closeUpload(){ document.getElementById('uploadModal').classList.remove('open'); }
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag-over');
+  const file=e.dataTransfer.files[0]; if(file) processFile(file);
+}
+function handleFileInput(e){ const file=e.target.files[0]; if(file) processFile(file); }
+
+function processFile(file){
+  if(!file.name.match(/\.(csv|xlsx?)$/i)){ showToast('⚠ Please upload a CSV or Excel file'); return; }
+  const pb=document.getElementById('progressBar'),pf=document.getElementById('progressFill');
+  pb.classList.add('show'); pf.style.width='30%';
+  document.getElementById('up-fname').textContent=file.name;
+  document.getElementById('up-fsize').textContent=(file.size/1024).toFixed(1)+' KB';
+
+  if(file.name.match(/\.csv$/i)){
+    // ── CSV path ──
+    const reader=new FileReader();
+    reader.onload=function(e){
+      pf.style.width='70%';
+      try{
+        const rows=parseCSVtoRows(e.target.result);
+        pf.style.width='90%';
+        const parsed=parseRows(rows);
+        if(!parsed){ pb.classList.remove('show'); return; }
+        parsedUploadData=parsed;
+        showParsedPreview(parsed);
+        pf.style.width='100%';
+        setTimeout(()=>pb.classList.remove('show'),500);
+        const btn=document.getElementById('applyUploadBtn');
+        btn.disabled=false; btn.style.opacity='1'; btn.style.cursor='pointer';
+        const btn2=document.getElementById('applyAndSaveBtn');
+        if(btn2){btn2.disabled=false; btn2.style.opacity='1'; btn2.style.cursor='pointer';}
+      } catch(err){ showToast('⚠ Error: '+err.message); pb.classList.remove('show'); console.error(err); }
+    };
+    reader.readAsText(file,'UTF-8');
+  } else {
+    // ── XLSX path (via SheetJS) ──
+    const reader=new FileReader();
+    reader.onload=function(e){
+      pf.style.width='70%';
+      try{
+        if(typeof XLSX==='undefined'){ showToast('⚠ SheetJS not loaded'); return; }
+        const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        const ws=wb.Sheets['Summary'];
+        if(!ws){ showToast('⚠ Sheet "Summary" not found'); pb.classList.remove('show'); return; }
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+        pf.style.width='90%';
+        const parsed=parseRows(rows);
+        if(!parsed){ pb.classList.remove('show'); return; }
+        parsedUploadData=parsed;
+        showParsedPreview(parsed);
+        pf.style.width='100%';
+        setTimeout(()=>pb.classList.remove('show'),500);
+        const btn=document.getElementById('applyUploadBtn');
+        btn.disabled=false; btn.style.opacity='1'; btn.style.cursor='pointer';
+        const btn2=document.getElementById('applyAndSaveBtn');
+        if(btn2){btn2.disabled=false; btn2.style.opacity='1'; btn2.style.cursor='pointer';}
+      } catch(err){ showToast('⚠ Error: '+err.message); pb.classList.remove('show'); console.error(err); }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+/* ── CSV → 2D array ── */
+function parseCSVtoRows(text){
+  const rows=[];
+  // Handle quoted fields with commas inside (Indian number format)
+  const lines=text.split(/\r?\n/);
+  lines.forEach(line=>{
+    const cols=[]; let cur='', inQ=false;
+    for(let i=0;i<line.length;i++){
+      const ch=line[i];
+      if(ch==='"'){ inQ=!inQ; }
+      else if(ch===','&&!inQ){ cols.push(cur.trim()); cur=''; }
+      else { cur+=ch; }
+    }
+    cols.push(cur.trim());
+    rows.push(cols);
+  });
+  return rows;
+}
+
+/* ── Parse Indian number format ── */
+function parseNum(v){
+  if(v===null||v===undefined||v==='') return 0;
+  const s=String(v).replace(/%/g,'').replace(/,/g,'').trim();
+  const n=parseFloat(s);
+  return isNaN(n)?0:n;
+}
+
+/* ── Main parser — works for both CSV & XLSX rows ──
+   CSV Column mapping (0-indexed):
+     Summary      row3-10:  col0=Region, col1=Base,    col2=NewAct, col3=Net
+     CATV New     row3-6:   col5=Region, col6=SD,      col7=HD,     col8=Total
+     HITS New     row12-19: col5=Region, col6=SD,      col7=HD,     col8=Total
+     CATV Base    row3-6:   col15=Region,col16=Current,col17=Opening
+     Comb Base    row7-14:  col20=Region,col21=Current,col22=Opening
+     AOP          row17-24: col0=Region, col1=Target,  col2=Ach,    col3=%
+*/
+function parseRows(rows){
+  const g=(r,c)=>r&&r[c]!=null?r[c]:'';
+  const n=(r,c)=>parseNum(g(r,c));
+  const s=(r,c)=>String(g(r,c)).trim();
+  const skip=v=>!v||v===''||/grand total|total|note:|regions|^nan$/i.test(v)||/new activation|active base|hits -|catv -/i.test(v);
+
+  // ── CATV New Activations (rows 3-6, cols 5-8) ──
+  const catvNew=[];
+  for(let i=3;i<=6;i++){
+    const r=rows[i]; if(!r) continue;
+    const region=s(r,5); if(skip(region)) continue;
+    catvNew.push({r:region, sd:n(r,6), hd:n(r,7), tot:n(r,8)});
+  }
+
+  // ── HITS New Activations (rows 12-19, cols 5-8) ──
+  const hitsNew=[];
+  for(let i=12;i<=20;i++){
+    const r=rows[i]; if(!r) continue;
+    const region=s(r,5); if(skip(region)) continue;
+    hitsNew.push({r:region, sd:n(r,6), hd:n(r,7), tot:n(r,8)});
+  }
+
+  // ── CATV Active Base (rows 3-6, cols 15-17) ──
+  const catvBase=[];
+  for(let i=3;i<=6;i++){
+    const r=rows[i]; if(!r) continue;
+    const region=s(r,15); if(skip(region)) continue;
+    catvBase.push({r:region, cur:n(r,16), lm:n(r,17)});
+  }
+
+  // ── Combined Base CATV+HITS (rows 7-14, cols 21-23) ──
+  const combBase=[];
+  for(let i=7;i<=14;i++){
+    const r=rows[i]; if(!r) continue;
+    const region=s(r,20); if(skip(region)) continue;
+    combBase.push({r:region, cur:n(r,21), lm:n(r,22)});
+  }
+
+  // ── Summary (rows 3-10, cols 0-3) ──
+  const summary=[];
+  for(let i=3;i<=10;i++){
+    const r=rows[i]; if(!r) continue;
+    const region=s(r,0); if(skip(region)) continue;
+    summary.push({r:region, base:n(r,1), newAct:n(r,2), net:n(r,3)});
+  }
+
+  // ── AOP (rows 17-24, cols 0-3) ──
+  const aop=[];
+  for(let i=17;i<=24;i++){
+    const r=rows[i]; if(!r) continue;
+    const region=s(r,0); if(skip(region)) continue;
+    const tgt=n(r,1), ach=n(r,2);
+    let pctRaw=String(g(r,3)).replace(/%/g,'').replace(/,/g,'').trim();
+    let pct=parseFloat(pctRaw)||0;
+    // If stored as decimal (e.g. 0.998) convert to percentage
+    if(pct>0&&pct<10) pct=parseFloat((pct*100).toFixed(2));
+    else if(pct===0&&tgt>0) pct=parseFloat((ach/tgt*100).toFixed(2));
+    aop.push({r:region, target:Math.round(tgt), ach:Math.round(ach), pct:parseFloat(pct.toFixed(2))});
+  }
+
+  // Derive HITS base = Combined - CATV per region
+  const catvMap={};
+  catvBase.forEach(x=>catvMap[x.r]={cur:x.cur,lm:x.lm});
+  const hitsBase=combBase.map(x=>{
+    const cv=catvMap[x.r]||{cur:0,lm:0};
+    return {r:x.r, cur:Math.round(x.cur-cv.cur), lm:Math.round(x.lm-cv.lm)};
+  });
+
+  if(!catvNew.length||!hitsNew.length||!summary.length){
+    showToast('⚠ Could not parse data — check file rows/columns'); return null;
+  }
+
+  // Date labels
+  const today=new Date(), yday=new Date(today);
+  yday.setDate(today.getDate()-1);
+  const fmt=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+
+  return {catvNew,hitsNew,catvBase,hitsBase,combBase,summary,aop,
+          reportDate:fmt(today), updatedTill:fmt(yday)};
+}
+
+function showParsedPreview(p){
+  const fN=n=>Math.round(n).toLocaleString('en-IN');
+  const fL=n=>n>=100000?(n/100000).toFixed(2)+'L':fN(n);
+  const sgn=v=>v>=0?'+':'';
+  const cTN=p.catvNew.reduce((a,b)=>a+b.tot,0);
+  const hTN=p.hitsNew.reduce((a,b)=>a+b.tot,0);
+  const cB=p.catvBase.reduce((a,b)=>a+b.cur,0);
+  const combB=p.combBase.reduce((a,b)=>a+b.cur,0);
+  const tNet=p.summary.reduce((a,b)=>a+b.net,0);
+  const totT=p.aop.reduce((a,b)=>a+b.target,0);
+  const totA=p.aop.reduce((a,b)=>a+b.ach,0);
+  const grid=[
+    ['CATV New Acts',fN(cTN)],  ['HITS New Acts',fN(hTN)],
+    ['CATV Base',fL(cB)],       ['HITS Base',fL(combB-cB)],
+    ['Total New Acts',fN(cTN+hTN)], ['Net Adds',sgn(tNet)+fN(tNet)],
+    ['AOP Achievement',(totA/totT*100).toFixed(1)+'%'], ['Updated Till',p.updatedTill],
+  ];
+  document.getElementById('up-parsed-grid').innerHTML=
+    grid.map(([l,v])=>`<div class="up-parsed-row"><span class="up-parsed-label">${l}</span><span class="up-parsed-val">${v}</span></div>`).join('');
+  document.getElementById('uploadPreview').classList.add('show');
+}
+
+function applyUploadedData(){
+  if(!parsedUploadData){ showToast('⚠ No data to apply'); return; }
+  const p=parsedUploadData;
+  D={reportDate:p.reportDate, catvNew:p.catvNew, hitsNew:p.hitsNew,
+     catvBase:p.catvBase, hitsBase:p.hitsBase, summary:p.summary, aop:p.aop};
+  const lbl=p.updatedTill;
+  ['reportDate','chipDate'].forEach(id=>{ const el=document.getElementById(id); if(el)el.textContent=lbl; });
+  const fd=document.getElementById('footerDate'); if(fd)fd.textContent=p.reportDate;
+  closeUpload();
+  renderAll();
+  showToast('✅ Dashboard updated with data as on '+p.updatedTill+'!');
+}
+</script>
+
+<!-- ══ UPLOAD DATA MODAL ══ -->
+<div class="upload-overlay" id="uploadModal">
+  <div class="upload-box">
+    <div class="upload-hd">
+      <div class="upload-hd-title">📂 Upload Excel Data</div>
+      <button class="modal-close" onclick="closeUpload()">✕</button>
+    </div>
+    <div class="upload-body">
+      <div class="drop-zone" id="dropZone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="handleDrop(event)">
+        <input type="file" accept=".csv,.xlsx,.xls" onchange="handleFileInput(event)">
+        <div class="drop-icon">📊</div>
+        <div class="drop-title">Drop your Excel file here</div>
+        <div class="drop-sub">or click to browse<br>Accepts .csv or .xlsx</div>
+      </div>
+      <div class="drop-hint">
+        <strong>Expected file:</strong> DTV_Data_-_Summary.csv (or .xlsx) · same format daily<br>
+        Same format as the daily file you send every morning.
+      </div>
+      <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill" style="width: 100%;"></div></div>
+      <div class="upload-preview show" id="uploadPreview">
+        <div class="up-file-row">
+          <div class="up-file-icon">✅</div>
+          <div><div class="up-file-name" id="up-fname">DTV Data - Summary.xlsx</div><div class="up-file-size" id="up-fsize">13.6 KB</div></div>
+        </div>
+        <div class="up-parsed-grid" id="up-parsed-grid"><div class="up-parsed-row"><span class="up-parsed-label">CATV New Acts</span><span class="up-parsed-val">2,703</span></div><div class="up-parsed-row"><span class="up-parsed-label">HITS New Acts</span><span class="up-parsed-val">19,145</span></div><div class="up-parsed-row"><span class="up-parsed-label">CATV Base</span><span class="up-parsed-val">4.78L</span></div><div class="up-parsed-row"><span class="up-parsed-label">HITS Base</span><span class="up-parsed-val">12.78L</span></div><div class="up-parsed-row"><span class="up-parsed-label">Total New Acts</span><span class="up-parsed-val">21,848</span></div><div class="up-parsed-row"><span class="up-parsed-label">Net Adds</span><span class="up-parsed-val">-54,796</span></div><div class="up-parsed-row"><span class="up-parsed-label">AOP Achievement</span><span class="up-parsed-val">95.1%</span></div><div class="up-parsed-row"><span class="up-parsed-label">Updated Till</span><span class="up-parsed-val">18 June 2026</span></div></div>
+      </div>
+    </div>
+    <div class="upload-footer">
+      <button class="btn btn-secondary" onclick="closeUpload()">Cancel</button>
+      <button class="btn btn-primary" id="applyUploadBtn" onclick="applyUploadedData()" style="opacity: 1; cursor: pointer;">Apply to Dashboard</button>
+      <button class="btn btn-green" id="applyAndSaveBtn" onclick="applyUploadedData();setTimeout(saveAsHTML,300)" style="opacity: 1; cursor: pointer;">💾 Apply &amp; Save File</button>
+    </div>
+  </div>
+</div>
+
+
+</body></html>
